@@ -2,13 +2,14 @@
 //! everything yet, but should be good enough to get a base render
 
 use crate::color::{GradientStop, sample_gradient, with_opacity};
-use crate::layout::{Layout, LayoutItem, Range, Rect};
+use crate::layout::{CommonFields, Layout, LayoutItem, Range, Rect};
 
 use crate::components::bar::render_bar;
 use crate::components::gbar::render_gbar;
 use crate::components::pixmap::render_pixmap;
 use crate::components::text::render_text;
 use image::{ImageBuffer, Rgba, RgbaImage};
+use log::warn;
 use std::error::Error;
 
 type Gradient = Vec<GradientStop>;
@@ -18,6 +19,8 @@ pub const CANVAS_H: u32 = 100;
 
 /// Render `layout` onto a fresh 200×100 black canvas and return it.
 pub(crate) fn render_layout(layout: &Layout) -> Result<RgbaImage, Box<dyn Error>> {
+    validate_layout(layout)?;
+    
     // Create a canvas and begin the work (black by default, should we be transparent?)
     let mut canvas: RgbaImage = ImageBuffer::from_pixel(CANVAS_W, CANVAS_H, Rgba([0, 0, 0, 255]));
     let mut items: Vec<&LayoutItem> = layout.items.iter().collect();
@@ -39,6 +42,53 @@ pub(crate) fn render_layout(layout: &Layout) -> Result<RgbaImage, Box<dyn Error>
     }
 
     Ok(canvas)
+}
+
+pub fn validate_layout(layout: &Layout) -> Result<(), String> {
+    use std::collections::HashMap;
+
+    fn rects_overlap(a: &Rect, b: &Rect) -> bool {
+        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+    }
+
+    // Group enabled items by z-index
+    let mut by_z: HashMap<u32, Vec<&LayoutItem>> = HashMap::new();
+
+    for item in &layout.items {
+        if item.enabled() {
+            by_z.entry(item.z_order()).or_default().push(item);
+        }
+    }
+
+    // Validate overlaps within each z-layer
+    for (z, items) in by_z {
+        let commons: Vec<&CommonFields> = items
+            .iter()
+            .map(|item| match item {
+                LayoutItem::Text(t) => &t.common,
+                LayoutItem::Pixmap(p) => &p.common,
+                LayoutItem::Bar(b) => &b.common,
+                LayoutItem::GBar(g) => &g.common,
+            })
+            .collect();
+
+        for i in 0..commons.len() {
+            for j in (i + 1)..commons.len() {
+                let a = commons[i];
+                let b = commons[j];
+
+                if rects_overlap(&a.rect, &b.rect) {
+                    // For now, we're not going to error on this, just log it.
+                    warn!(
+                        "Layout overlap detected at z-order {} between items '{}' and '{}'",
+                        z, a.key, b.key
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Alpha-composite `src` over `dst`.
