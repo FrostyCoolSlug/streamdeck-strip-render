@@ -20,7 +20,7 @@ pub const CANVAS_H: u32 = 100;
 /// Render `layout` onto a fresh 200×100 black canvas and return it.
 pub(crate) fn render_layout(layout: &Layout) -> Result<RgbaImage, Box<dyn Error>> {
     validate_layout(layout)?;
-    
+
     // Create a canvas and begin the work (black by default, should we be transparent?)
     let mut canvas: RgbaImage = ImageBuffer::from_pixel(CANVAS_W, CANVAS_H, Rgba([0, 0, 0, 255]));
     let mut items: Vec<&LayoutItem> = layout.items.iter().collect();
@@ -89,6 +89,14 @@ pub fn validate_layout(layout: &Layout) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// A simple helper to check if a rect is inside the canvas bounds.
+pub(crate) fn is_valid_rect(rect: &Rect) -> bool {
+    rect.x < CANVAS_W
+        && rect.y < CANVAS_H
+        && rect.x + rect.width <= CANVAS_W
+        && rect.y + rect.height <= CANVAS_H
 }
 
 /// Alpha-composite `src` over `dst`.

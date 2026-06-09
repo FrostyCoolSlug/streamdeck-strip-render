@@ -1,10 +1,15 @@
 use crate::color::{parse_gradient, with_opacity};
 use crate::layout::{PixmapItem, PixmapSource, Rect};
-use crate::render::{CANVAS_H, CANVAS_W, FillStyle, blend, fill_rect};
+use crate::render::{CANVAS_H, CANVAS_W, FillStyle, blend, fill_rect, is_valid_rect};
 use image::{Rgba, RgbaImage, imageops};
+use log::warn;
 
 pub(crate) fn render_pixmap(canvas: &mut RgbaImage, item: &PixmapItem) {
     let rect = item.common.rect;
+
+    if !is_valid_rect(&rect) {
+        warn!("Rect Extends Outside Canvas for {} - {:?}", item.common.key,  rect);
+    }
 
     // Render the background
     let style = FillStyle {
