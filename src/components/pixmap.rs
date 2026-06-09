@@ -6,9 +6,9 @@ use image::{Rgba, RgbaImage, imageops};
 use log::warn;
 
 pub(crate) fn render_pixmap(canvas: &mut RgbaImage, item: &PixmapItem) {
-    let rect = item.common.rect;
+    let rect = &item.common.rect;
 
-    if !is_valid_rect(&rect) {
+    if !is_valid_rect(rect) {
         warn!(
             "Rect Extends Outside Canvas for {} - {:?}",
             item.common.key, rect
@@ -24,12 +24,12 @@ pub(crate) fn render_pixmap(canvas: &mut RgbaImage, item: &PixmapItem) {
         gradient: &parse_gradient(&item.common.background),
         opacity: item.common.opacity,
     };
-    fill_rect(canvas, &rect, &style);
+    fill_rect(canvas, rect, &style);
 
     // Load and draw the image, or draw the checkerboard
-    match load_pixmap_source(&item.value, &rect) {
-        Some(img) => blit_image(canvas, &img, &rect, item.common.opacity),
-        None => draw_checkerboard(canvas, &rect, item.common.opacity),
+    match load_pixmap_source(&item.value, rect) {
+        Some(img) => blit_image(canvas, &img, rect, item.common.opacity),
+        None => draw_checkerboard(canvas, rect, item.common.opacity),
     }
 }
 

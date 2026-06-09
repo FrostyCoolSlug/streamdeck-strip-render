@@ -14,9 +14,9 @@ pub(crate) static DEFAULT_FONT: LazyLock<Mutex<FontVec>> = LazyLock::new(|| {
 });
 
 pub(crate) fn render_text(canvas: &mut RgbaImage, item: &TextItem) {
-    let rect = item.common.rect;
+    let rect = &item.common.rect;
 
-    if !is_valid_rect(&rect) {
+    if !is_valid_rect(rect) {
         warn!(
             "Rect Extends Outside Canvas for {} - {:?}",
             item.common.key, rect
@@ -31,7 +31,7 @@ pub(crate) fn render_text(canvas: &mut RgbaImage, item: &TextItem) {
         gradient: &parse_gradient(&item.common.background),
         opacity: item.common.opacity,
     };
-    fill_rect(canvas, &rect, &style);
+    fill_rect(canvas, rect, &style);
 
     // If there's no text, don't bother rendering
     if item.value().is_empty() {
@@ -129,7 +129,7 @@ fn draw_glyphs_clipped(
     text_x: f32,
     text_y: f32,
     color: Rgba<u8>,
-    rect: Rect,
+    rect: &Rect,
 ) {
     let clip_x = (rect.x + rect.width).min(CANVAS_W) as i32;
     let clip_y = (rect.y + rect.height).min(CANVAS_H) as i32;
