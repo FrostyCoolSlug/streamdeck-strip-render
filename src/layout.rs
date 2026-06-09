@@ -18,7 +18,6 @@ fn default_schema() -> String {
     "https://schemas.elgato.com/streamdeck/plugins/layout.json".to_string()
 }
 
-
 /// This enum is used to deserialize the `type` field of the layout item, and should map and
 /// parse it correctly..
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,7 +139,9 @@ pub struct TextItem {
 impl TextItem {
     pub fn value(&self) -> String {
         // TODO: Values are optional, if we don't have one, just render the key, this might not be correct
-        self.value.clone().unwrap_or_else(|| format!("{{{{{}}}}}", self.common.key))
+        self.value
+            .clone()
+            .unwrap_or_else(|| format!("{{{{{}}}}}", self.common.key))
     }
 }
 
@@ -310,7 +311,6 @@ pub struct BarItem {
     #[serde(flatten)]
     pub bar_common: BarCommon,
 }
-
 
 /// GBar item Handler
 #[derive(Debug, Clone, Serialize, Deserialize)]
