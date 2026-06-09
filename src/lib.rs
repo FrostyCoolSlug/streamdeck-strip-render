@@ -5,6 +5,7 @@ use image::{ColorType, ImageEncoder, RgbaImage};
 use std::error::Error;
 
 mod color;
+mod components;
 mod layout;
 mod render;
 
@@ -34,7 +35,6 @@ pub fn get_png_from_layout(json: &str) -> Result<Vec<u8>, Box<dyn Error>> {
 mod tests {
     use super::*;
     use crate::render::render_layout;
-    use std::ffi::OsStr;
     use std::fs;
     use std::path::PathBuf;
 
@@ -43,7 +43,7 @@ mod tests {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("target");
         path.push("test-output");
-        std::fs::create_dir_all(&path).expect("failed to create test output directory");
+        fs::create_dir_all(&path).expect("failed to create test output directory");
         path.push(file_name);
         path
     }
