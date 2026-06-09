@@ -1,10 +1,11 @@
+use crate::FULL_VALIDATION;
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{Rect, TextAlignment, TextItem, TextOverflow};
 use crate::render::{CANVAS_H, CANVAS_W, blend, fill_rect, is_valid_rect};
 use ab_glyph::{Font, FontVec, PxScale, PxScaleFont, ScaleFont, VariableFont};
 use image::{Rgba, RgbaImage};
-use std::sync::{LazyLock, Mutex};
 use log::warn;
+use std::sync::{LazyLock, Mutex};
 
 pub(crate) static DEFAULT_FONT: LazyLock<Mutex<FontVec>> = LazyLock::new(|| {
     static BUNDLED: &[u8] = include_bytes!("../../resources/fonts/InterVariable.ttf");
@@ -16,7 +17,13 @@ pub(crate) fn render_text(canvas: &mut RgbaImage, item: &TextItem) {
     let rect = item.common.rect;
 
     if !is_valid_rect(&rect) {
-        warn!("Rect Extends Outside Canvas for {} - {:?}", item.common.key,  rect);
+        warn!(
+            "Rect Extends Outside Canvas for {} - {:?}",
+            item.common.key, rect
+        );
+        if FULL_VALIDATION {
+            return;
+        }
     }
 
     // Fill the background

@@ -1,15 +1,23 @@
+use crate::FULL_VALIDATION;
 use crate::color::{parse_color, parse_gradient, sample_gradient, with_opacity};
 use crate::components::bar_common::draw_bar_shape;
 use crate::layout::{GBarItem, Rect};
-use crate::render::{CANVAS_H, CANVAS_W, blend, normalise, is_valid_rect};
+use crate::render::{CANVAS_H, CANVAS_W, blend, is_valid_rect, normalise};
 use image::{Rgba, RgbaImage};
 use log::warn;
 
 pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
     let rect = &item.common.rect;
 
-    if !is_valid_rect(&rect) {
-        warn!("Rect Extends Outside Canvas for {} - {:?}", item.common.key,  rect);
+    if !is_valid_rect(rect) {
+        warn!(
+            "Rect Extends Outside Canvas for {} - {:?}",
+            item.common.key, rect
+        );
+
+        if FULL_VALIDATION {
+            return;
+        }
     }
 
     // bar_h is the indicator triangle height; the bar occupies the rest of the rect.

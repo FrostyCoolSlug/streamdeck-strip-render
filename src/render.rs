@@ -4,6 +4,7 @@
 use crate::color::{GradientStop, sample_gradient, with_opacity};
 use crate::layout::{CommonFields, Layout, LayoutItem, Range, Rect};
 
+use crate::FULL_VALIDATION;
 use crate::components::bar::render_bar;
 use crate::components::gbar::render_gbar;
 use crate::components::pixmap::render_pixmap;
@@ -79,10 +80,16 @@ pub fn validate_layout(layout: &Layout) -> Result<(), String> {
 
                 if rects_overlap(&a.rect, &b.rect) {
                     // For now, we're not going to error on this, just log it.
-                    warn!(
+                    let text = format!(
                         "Layout overlap detected at z-order {} between items '{}' and '{}'",
                         z, a.key, b.key
                     );
+
+                    warn!("{}", text);
+
+                    if FULL_VALIDATION {
+                        return Err(text);
+                    }
                 }
             }
         }

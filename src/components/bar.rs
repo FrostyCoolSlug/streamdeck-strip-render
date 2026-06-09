@@ -1,13 +1,21 @@
+use crate::FULL_VALIDATION;
 use crate::components::bar_common::draw_bar_shape;
 use crate::layout::BarItem;
+use crate::render::is_valid_rect;
 use image::RgbaImage;
 use log::warn;
-use crate::render::is_valid_rect;
 
 pub(crate) fn render_bar(canvas: &mut RgbaImage, item: &BarItem) {
     let rect = item.common.rect;
     if !is_valid_rect(&item.common.rect) {
-        warn!("Rect Extends Outside Canvas for {} - {:?}", item.common.key,  rect);
+        warn!(
+            "Rect Extends Outside Canvas for {} - {:?}",
+            item.common.key, rect
+        );
+
+        if FULL_VALIDATION {
+            return;
+        }
     }
 
     // Basic bar doesn't need anything special, just draw it with the params

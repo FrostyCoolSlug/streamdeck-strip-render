@@ -11,7 +11,7 @@ pub(crate) fn draw_bar_shape(
     bar_common: &BarCommon,
 ) {
     let rect = common.rect;
-    
+
     let bg = FillStyle {
         gradient: &parse_gradient(&bar_common.bar_bg_c),
         opacity: common.opacity,

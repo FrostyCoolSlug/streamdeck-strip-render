@@ -23,7 +23,9 @@ can confirm how they're supposed to render.
     - I'm wondering whether things have internal paddings / margins that aren't documented
 - It might make sense to render some widgets at 2x then resize to introduce some aliasing
 - The Stream Deck app ignores widgets that render past the edge of the canvas, I just warn and clip.
+  - There's a `FULL_VALIDATION` flag in lib.rs which will prevent rendering these widgets
 - Rects should never overlap on the same z-index, I currently just warn rather than reject the layout
+  - There's a `FULL_VALIDATION` flag in lib.rs which will reject layouts that do this
 - The canvas is currently black by default, but this may need to be transparent
 - This should probably have some logging :D
 

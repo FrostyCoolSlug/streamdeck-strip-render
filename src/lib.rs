@@ -9,6 +9,10 @@ mod components;
 mod layout;
 mod render;
 
+/// If true, we'll error on overlaps and not draw items that expand passed the canvas edges
+/// If false, we'll draw the items anyway, but it will be clipped to the canvas edges
+const FULL_VALIDATION: bool = false;
+
 pub fn parse_layout(json: &str) -> Result<Layout, Box<dyn Error>> {
     serde_json::from_str(json).map_err(|err| err.into())
 }
@@ -35,10 +39,10 @@ pub fn get_png_from_layout(json: &str) -> Result<Vec<u8>, Box<dyn Error>> {
 mod tests {
     use super::*;
     use crate::render::render_layout;
+    use log::info;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Once;
-    use log::info;
 
     static INIT: Once = Once::new();
     fn init() {
@@ -49,7 +53,6 @@ mod tests {
                 .init();
         });
     }
-
 
     /// Make sure the output path exists
     fn test_output_path(file_name: &str) -> PathBuf {
