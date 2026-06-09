@@ -1,0 +1,19 @@
+[package]
+name = "streamdeck-strip-render"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["png", "bmp", "tiff"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_repr = "0.1"
+serde_json = "1.0"
+
+# Font handling
+ab_glyph = "0.2"
+
+# Image Handling
+base64 = "0.22"
+resvg = "0.47"
+usvg = "0.47"
+tiny-skia = "0.12"
