@@ -41,5 +41,4 @@ can confirm how they're supposed to render.
 ### GBar
 - All Bar related issues apply here too
 - The arrow looks terrible, might need aliasing
-- Should we still fill gbar values (the example render doesn't)?
 - Are borders on the arrows forced?
