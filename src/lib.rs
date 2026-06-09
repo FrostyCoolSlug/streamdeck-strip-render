@@ -37,6 +37,19 @@ mod tests {
     use crate::render::render_layout;
     use std::fs;
     use std::path::PathBuf;
+    use std::sync::Once;
+    use log::info;
+
+    static INIT: Once = Once::new();
+    fn init() {
+        INIT.call_once(|| {
+            env_logger::Builder::new()
+                .filter_level(log::LevelFilter::Debug)
+                .is_test(true)
+                .init();
+        });
+    }
+
 
     /// Make sure the output path exists
     fn test_output_path(file_name: &str) -> PathBuf {
@@ -58,13 +71,15 @@ mod tests {
 
     #[test]
     fn parse_layouts() {
+        init();
+
         let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let test_paths = base_path.join("test-data/");
 
         let paths = find_json_files(&test_paths);
 
         for path in paths {
-            println!("Testing {:?}.. ", path);
+            info!("Testing {:?}.. ", path);
 
             let json = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
