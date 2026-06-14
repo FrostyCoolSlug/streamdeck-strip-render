@@ -1,7 +1,9 @@
 use crate::layout::Layout;
 use crate::render::render_layout;
 use image::codecs::png::PngEncoder;
-use image::{ColorType, ImageEncoder, RgbaImage};
+use image::{ColorType, ImageEncoder};
+use serde::Deserialize;
+use serde_json::Value;
 use std::error::Error;
 
 mod color;
@@ -9,24 +11,22 @@ mod components;
 mod layout;
 mod render;
 
-/// If true, we'll error on overlaps and not draw items that expand passed the canvas edges
-/// If false, we'll draw the items anyway, but it will be clipped to the canvas edges
-
 #[cfg(feature = "strict-rendering")]
 const STRICT_RENDER: bool = true;
 #[cfg(not(feature = "strict-rendering"))]
 const STRICT_RENDER: bool = false;
 
-pub fn parse_layout(json: &str) -> Result<Layout, Box<dyn Error>> {
-    serde_json::from_str(json).map_err(|err| err.into())
+pub fn get_png_from_layout_str(json: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+    let layout = serde_json::from_str(json).map_err(|err| -> Box<dyn Error> { err.into() })?;
+    get_png_from_layout(&layout)
 }
 
-pub fn render_from_layout(layout: &Layout) -> Result<RgbaImage, Box<dyn Error>> {
-    render_layout(layout)
+pub fn get_png_from_layout_value(layout: &Value) -> Result<Vec<u8>, Box<dyn Error>> {
+    let layout = Layout::deserialize(layout).map_err(|err| -> Box<dyn Error> { err.into() })?;
+    get_png_from_layout(&layout)
 }
 
-pub fn get_png_from_layout(json: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    let layout = parse_layout(json)?;
+fn get_png_from_layout(layout: &Layout) -> Result<Vec<u8>, Box<dyn Error>> {
     let image = render_layout(&layout)?;
 
     let mut bytes = Vec::new();
@@ -42,7 +42,6 @@ pub fn get_png_from_layout(json: &str) -> Result<Vec<u8>, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::render::render_layout;
     use log::info;
     use std::fs;
     use std::path::PathBuf;
@@ -69,10 +68,10 @@ mod tests {
     }
 
     /// Save the returned image to a file
-    fn save_test_canvas(file_name: &str, canvas: &RgbaImage) {
+    fn save_test_image(file_name: &str, img: &Vec<u8>) {
         let path = test_output_path(file_name);
-        canvas
-            .save(&path)
+
+        fs::write(&path, img)
             .unwrap_or_else(|e| panic!("failed to save test output {:?}: {}", path, e));
     }
 
@@ -90,7 +89,8 @@ mod tests {
 
             let json = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
-            let layout = parse_layout(&json)
+
+            let img = get_png_from_layout_str(&json)
                 .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
 
             let output_file = path
@@ -98,10 +98,7 @@ mod tests {
                 .and_then(|stem| stem.to_str())
                 .expect("Failed to get file stem");
 
-            save_test_canvas(
-                format!("{}.png", output_file).as_str(),
-                &render_layout(&layout).expect("Failed to render layout"),
-            );
+            save_test_image(format!("{}.png", output_file).as_str(), &img);
         }
     }
 
