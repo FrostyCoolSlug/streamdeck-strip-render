@@ -1,7 +1,7 @@
 use crate::layout::Layout;
 use crate::render::render_layout;
 use image::codecs::png::PngEncoder;
-use image::{ColorType, ImageEncoder};
+use image::{ColorType, DynamicImage, ImageEncoder};
 use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
@@ -16,6 +16,26 @@ mod render;
 const STRICT_RENDER: bool = true;
 #[cfg(not(feature = "strict-rendering"))]
 const STRICT_RENDER: bool = false;
+
+pub fn get_dynamic_from_layout_str(
+    json: &str,
+    img_base: &Path,
+    bg_image: Option<String>,
+) -> Result<DynamicImage, Box<dyn Error>> {
+    let mut layout = serde_json::from_str(json).map_err(|err| -> Box<dyn Error> { err.into() })?;
+    let img = render_layout(&mut layout, img_base, bg_image)?;
+    Ok(DynamicImage::ImageRgba8(img))
+}
+
+pub fn get_dynamic_from_layout_value(
+    layout: &Value,
+    img_base: &Path,
+    bg_image: Option<String>,
+) -> Result<DynamicImage, Box<dyn Error>> {
+    let mut layout = Layout::deserialize(layout).map_err(|err| -> Box<dyn Error> { err.into() })?;
+    let img = render_layout(&mut layout, img_base, bg_image)?;
+    Ok(DynamicImage::ImageRgba8(img))
+}
 
 pub fn get_png_from_layout_str(
     json: &str,
