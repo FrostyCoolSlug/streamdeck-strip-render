@@ -12,7 +12,7 @@ use crate::components::text::render_text;
 use image::{ImageBuffer, Rgba, RgbaImage};
 use log::warn;
 use std::error::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 type Gradient = Vec<GradientStop>;
 
@@ -23,11 +23,21 @@ pub const CANVAS_H: u32 = 100;
 pub(crate) fn render_layout(
     layout: &mut Layout,
     img_base: &Path,
+    bg_image: Option<String>,
 ) -> Result<RgbaImage, Box<dyn Error>> {
     validate_layout(layout, img_base)?;
 
     // Create a canvas and begin the work (black by default, should we be transparent?)
     let mut canvas: RgbaImage = ImageBuffer::from_pixel(CANVAS_W, CANVAS_H, Rgba([0, 0, 0, 255]));
+
+    // If we have a background image, load it and overlay it.
+    if let Some(bg) = bg_image {
+        match image::open(PathBuf::from(bg.clone())) {
+            Ok(img) => image::imageops::overlay(&mut canvas, &img, 0, 0),
+            Err(e) => warn!("Failed to load background image '{}': {}", bg, e),
+        }
+    }
+
     let mut items: Vec<&LayoutItem> = layout.items.iter().collect();
 
     // We order stuff by z-index, so things draw over things :)

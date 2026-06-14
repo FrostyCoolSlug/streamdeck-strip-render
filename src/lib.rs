@@ -17,21 +17,30 @@ const STRICT_RENDER: bool = true;
 #[cfg(not(feature = "strict-rendering"))]
 const STRICT_RENDER: bool = false;
 
-pub fn get_png_from_layout_str(json: &str, img_base: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn get_png_from_layout_str(
+    json: &str,
+    img_base: &Path,
+    bg_image: Option<String>,
+) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut layout = serde_json::from_str(json).map_err(|err| -> Box<dyn Error> { err.into() })?;
-    get_png_from_layout(&mut layout, img_base)
+    get_png_from_layout(&mut layout, img_base, bg_image)
 }
 
 pub fn get_png_from_layout_value(
     layout: &Value,
     img_base: &Path,
+    bg_image: Option<String>,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut layout = Layout::deserialize(layout).map_err(|err| -> Box<dyn Error> { err.into() })?;
-    get_png_from_layout(&mut layout, img_base)
+    get_png_from_layout(&mut layout, img_base, bg_image)
 }
 
-fn get_png_from_layout(layout: &mut Layout, img_base: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
-    let image = render_layout(layout, img_base)?;
+fn get_png_from_layout(
+    layout: &mut Layout,
+    img_base: &Path,
+    bg_image: Option<String>,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    let image = render_layout(layout, img_base, bg_image)?;
 
     let mut bytes = Vec::new();
     PngEncoder::new(&mut bytes).write_image(
@@ -94,9 +103,12 @@ mod tests {
             let json = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
 
-            let img =
-                get_png_from_layout_str(&json, path.parent().expect("Failed to fetch parent path"))
-                    .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
+            let img = get_png_from_layout_str(
+                &json,
+                path.parent().expect("Failed to fetch parent path"),
+                None,
+            )
+            .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
 
             let output_file = path
                 .file_stem()
