@@ -26,30 +26,8 @@ pub(crate) fn draw_bar_shape(
     let fraction = normalise(bar_common.value, &bar_common.range);
     let subtype = bar_common.subtype;
 
-    let rects: &[Rect] = match subtype {
-        // For these, we keep the rect as-is
-        BarSubtype::Rectangle | BarSubtype::Trapezoid | BarSubtype::Groove => &[rect],
-
-        // These need the rect split into two halves with a gap in between
-        BarSubtype::DoubleRectangle | BarSubtype::DoubleTrapezoid => {
-            let gap = 2u32;
-            let half = (rect.height.saturating_sub(gap)) / 2;
-            if half == 0 {
-                return;
-            }
-            &[
-                Rect {
-                    height: half,
-                    ..rect
-                },
-                Rect {
-                    y: rect.y + half + gap,
-                    height: half,
-                    ..rect
-                },
-            ]
-        }
-    };
+    // In the official app, DoubleRectangle and DoubleTrapezoid render as a single Rectangle
+    // or Trapezoid respectively. The Double apparently means nothing :D
 
     // Get the function needed for drawing
     // TODO: Trapezoid
@@ -66,20 +44,18 @@ pub(crate) fn draw_bar_shape(
         BarSubtype::Groove => draw_groove_border,
     };
 
-    for r in rects {
-        // Draw the bar base
-        draw_fn(canvas, r, &bg, r.width);
+    // Draw the bar base
+    draw_fn(canvas, &rect, &bg, rect.width);
 
-        // If we have a value > 0, draw the fill
-        if fraction > 0.0 {
-            let fill_w = (r.width as f32 * fraction) as u32;
-            draw_fn(canvas, r, &fill, fill_w);
-        }
+    // If we have a value > 0, draw the fill
+    if fraction > 0.0 {
+        let fill_w = (rect.width as f32 * fraction) as u32;
+        draw_fn(canvas, &rect, &fill, fill_w);
+    }
 
-        // Finally, draw the border if needed
-        if border_w > 0 {
-            draw_border_fn(canvas, r, border_c, border_w);
-        }
+    // Finally, draw the border if needed
+    if border_w > 0 {
+        draw_border_fn(canvas, &rect, border_c, border_w);
     }
 }
 
