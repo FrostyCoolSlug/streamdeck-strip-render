@@ -5,6 +5,7 @@ use image::{ColorType, ImageEncoder};
 use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
+use std::path::Path;
 
 mod color;
 mod components;
@@ -16,18 +17,21 @@ const STRICT_RENDER: bool = true;
 #[cfg(not(feature = "strict-rendering"))]
 const STRICT_RENDER: bool = false;
 
-pub fn get_png_from_layout_str(json: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    let layout = serde_json::from_str(json).map_err(|err| -> Box<dyn Error> { err.into() })?;
-    get_png_from_layout(&layout)
+pub fn get_png_from_layout_str(json: &str, img_base: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut layout = serde_json::from_str(json).map_err(|err| -> Box<dyn Error> { err.into() })?;
+    get_png_from_layout(&mut layout, img_base)
 }
 
-pub fn get_png_from_layout_value(layout: &Value) -> Result<Vec<u8>, Box<dyn Error>> {
-    let layout = Layout::deserialize(layout).map_err(|err| -> Box<dyn Error> { err.into() })?;
-    get_png_from_layout(&layout)
+pub fn get_png_from_layout_value(
+    layout: &Value,
+    img_base: &Path,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut layout = Layout::deserialize(layout).map_err(|err| -> Box<dyn Error> { err.into() })?;
+    get_png_from_layout(&mut layout, img_base)
 }
 
-fn get_png_from_layout(layout: &Layout) -> Result<Vec<u8>, Box<dyn Error>> {
-    let image = render_layout(&layout)?;
+fn get_png_from_layout(layout: &mut Layout, img_base: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
+    let image = render_layout(layout, img_base)?;
 
     let mut bytes = Vec::new();
     PngEncoder::new(&mut bytes).write_image(
@@ -90,8 +94,9 @@ mod tests {
             let json = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
 
-            let img = get_png_from_layout_str(&json)
-                .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
+            let img =
+                get_png_from_layout_str(&json, path.parent().expect("Failed to fetch parent path"))
+                    .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
 
             let output_file = path
                 .file_stem()

@@ -2,7 +2,7 @@
 //! everything yet, but should be good enough to get a base render
 
 use crate::color::{GradientStop, sample_gradient, with_opacity};
-use crate::layout::{CommonFields, Layout, LayoutItem, Range, Rect};
+use crate::layout::{CommonFields, Layout, LayoutItem, PixmapSource, Range, Rect};
 
 use crate::STRICT_RENDER;
 use crate::components::bar::render_bar;
@@ -12,6 +12,7 @@ use crate::components::text::render_text;
 use image::{ImageBuffer, Rgba, RgbaImage};
 use log::warn;
 use std::error::Error;
+use std::path::Path;
 
 type Gradient = Vec<GradientStop>;
 
@@ -19,8 +20,11 @@ pub const CANVAS_W: u32 = 200;
 pub const CANVAS_H: u32 = 100;
 
 /// Render `layout` onto a fresh 200×100 black canvas and return it.
-pub(crate) fn render_layout(layout: &Layout) -> Result<RgbaImage, Box<dyn Error>> {
-    validate_layout(layout)?;
+pub(crate) fn render_layout(
+    layout: &mut Layout,
+    img_base: &Path,
+) -> Result<RgbaImage, Box<dyn Error>> {
+    validate_layout(layout, img_base)?;
 
     // Create a canvas and begin the work (black by default, should we be transparent?)
     let mut canvas: RgbaImage = ImageBuffer::from_pixel(CANVAS_W, CANVAS_H, Rgba([0, 0, 0, 255]));
@@ -45,11 +49,20 @@ pub(crate) fn render_layout(layout: &Layout) -> Result<RgbaImage, Box<dyn Error>
     Ok(canvas)
 }
 
-pub fn validate_layout(layout: &Layout) -> Result<(), String> {
+pub fn validate_layout(layout: &mut Layout, img_base: &Path) -> Result<(), String> {
     use std::collections::HashMap;
 
     fn rects_overlap(a: &Rect, b: &Rect) -> bool {
         a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+    }
+
+    // All Pixmap paths are relative, we need to adjust them to the absolute path
+    for item in &mut layout.items {
+        if let LayoutItem::Pixmap(p) = item
+            && let PixmapSource::File(s) = &mut p.value
+        {
+            *s = img_base.join(&*s).to_string_lossy().into_owned();
+        }
     }
 
     // Group enabled items by z-index
