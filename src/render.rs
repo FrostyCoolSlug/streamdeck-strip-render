@@ -33,7 +33,18 @@ pub(crate) fn render_layout(
     // If we have a background image, load it and overlay it.
     if let Some(bg) = bg_image {
         match image::open(PathBuf::from(bg.clone())) {
-            Ok(img) => image::imageops::overlay(&mut canvas, &img, 0, 0),
+            Ok(img) => {
+                if img.width() == CANVAS_W && img.height() == CANVAS_H {
+                    image::imageops::overlay(&mut canvas, &img, 0, 0);
+                } else {
+                    warn!(
+                        "Background image '{}' is not the correct size ({}x{})",
+                        bg,
+                        img.width(),
+                        img.height()
+                    );
+                }
+            }
             Err(e) => warn!("Failed to load background image '{}': {}", bg, e),
         }
     }
