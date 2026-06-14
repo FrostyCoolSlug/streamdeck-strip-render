@@ -1,4 +1,4 @@
-use crate::FULL_VALIDATION;
+use crate::STRICT_RENDER;
 use crate::color::{parse_color, parse_gradient, sample_gradient, with_opacity};
 use crate::components::bar_common::draw_bar_shape;
 use crate::layout::{GBarItem, Rect};
@@ -15,7 +15,7 @@ pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
             item.common.key, rect
         );
 
-        if FULL_VALIDATION {
+        if STRICT_RENDER {
             return;
         }
     }

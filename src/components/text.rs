@@ -1,4 +1,4 @@
-use crate::FULL_VALIDATION;
+use crate::STRICT_RENDER;
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{Rect, TextAlignment, TextItem, TextOverflow};
 use crate::render::{CANVAS_H, CANVAS_W, blend, fill_rect, is_valid_rect};
@@ -21,7 +21,7 @@ pub(crate) fn render_text(canvas: &mut RgbaImage, item: &TextItem) {
             "Rect Extends Outside Canvas for {} - {:?}",
             item.common.key, rect
         );
-        if FULL_VALIDATION {
+        if STRICT_RENDER {
             return;
         }
     }

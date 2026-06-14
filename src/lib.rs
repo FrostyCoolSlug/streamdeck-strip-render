@@ -11,7 +11,11 @@ mod render;
 
 /// If true, we'll error on overlaps and not draw items that expand passed the canvas edges
 /// If false, we'll draw the items anyway, but it will be clipped to the canvas edges
-const FULL_VALIDATION: bool = false;
+
+#[cfg(feature = "strict-rendering")]
+const STRICT_RENDER: bool = true;
+#[cfg(not(feature = "strict-rendering"))]
+const STRICT_RENDER: bool = false;
 
 pub fn parse_layout(json: &str) -> Result<Layout, Box<dyn Error>> {
     serde_json::from_str(json).map_err(|err| err.into())

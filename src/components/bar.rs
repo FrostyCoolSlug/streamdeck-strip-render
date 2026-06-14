@@ -1,4 +1,4 @@
-use crate::FULL_VALIDATION;
+use crate::STRICT_RENDER;
 use crate::components::bar_common::draw_bar_shape;
 use crate::layout::BarItem;
 use crate::render::is_valid_rect;
@@ -13,7 +13,7 @@ pub(crate) fn render_bar(canvas: &mut RgbaImage, item: &BarItem) {
             item.common.key, rect
         );
 
-        if FULL_VALIDATION {
+        if STRICT_RENDER {
             return;
         }
     }

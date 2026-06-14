@@ -4,7 +4,7 @@
 use crate::color::{GradientStop, sample_gradient, with_opacity};
 use crate::layout::{CommonFields, Layout, LayoutItem, Range, Rect};
 
-use crate::FULL_VALIDATION;
+use crate::STRICT_RENDER;
 use crate::components::bar::render_bar;
 use crate::components::gbar::render_gbar;
 use crate::components::pixmap::render_pixmap;
@@ -87,7 +87,7 @@ pub fn validate_layout(layout: &Layout) -> Result<(), String> {
 
                     warn!("{}", text);
 
-                    if FULL_VALIDATION {
+                    if STRICT_RENDER {
                         return Err(text);
                     }
                 }

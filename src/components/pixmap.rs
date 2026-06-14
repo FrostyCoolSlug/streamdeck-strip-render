@@ -1,4 +1,4 @@
-use crate::FULL_VALIDATION;
+use crate::STRICT_RENDER;
 use crate::color::{parse_gradient, with_opacity};
 use crate::layout::{PixmapItem, PixmapSource, Rect};
 use crate::render::{CANVAS_H, CANVAS_W, FillStyle, blend, fill_rect, is_valid_rect};
@@ -14,7 +14,7 @@ pub(crate) fn render_pixmap(canvas: &mut RgbaImage, item: &PixmapItem) {
             item.common.key, rect
         );
 
-        if FULL_VALIDATION {
+        if STRICT_RENDER {
             return;
         }
     }
