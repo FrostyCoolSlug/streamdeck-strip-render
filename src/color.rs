@@ -93,7 +93,7 @@ pub fn parse_color(s: &str) -> Rgba<u8> {
 
     // Raw hex without '#', we check the characters to make sure they're hex so we don't
     // accidentally swallow a named colour.
-    if s.len() == 3 || s.len() == 6 || s.len() == 8 && s.chars().all(|c| c.is_ascii_hexdigit()) {
+    if (s.len() == 3 || s.len() == 6 || s.len() == 8) && s.chars().all(|c| c.is_ascii_hexdigit()) {
         return parse_hex(s);
     }
 
