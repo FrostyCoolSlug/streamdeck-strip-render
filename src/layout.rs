@@ -299,7 +299,49 @@ pub struct BarCommon {
 
     /// Fill value; correlates with `range`.
     /// This has no default and should ALWAYS be defined.
+    #[serde(deserialize_with = "deserialize_f32_string_or_number")]
     pub value: f32,
+}
+
+// This will turn a Number or String into an f32
+fn deserialize_f32_string_or_number<'de, D>(deserializer: D) -> Result<f32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct F32Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for F32Visitor {
+        type Value = f32;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "a float or string representing a float")
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<f32, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v as f32)
+        }
+
+        fn visit_f64<E>(self, v: f64) -> Result<f32, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v as f32)
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<f32, E>
+        where
+            E: serde::de::Error,
+        {
+            v.trim()
+                .parse::<f32>()
+                .map_err(|_| E::custom("invalid float string"))
+        }
+    }
+
+    deserializer.deserialize_any(F32Visitor)
 }
 
 /// Bar item Handler
