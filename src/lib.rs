@@ -1,10 +1,11 @@
+use anyhow::{Result, anyhow};
+
 use crate::layout::Layout;
 use crate::render::render_layout;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, DynamicImage, ImageEncoder};
 use serde::Deserialize;
 use serde_json::Value;
-use std::error::Error;
 use std::path::Path;
 
 mod color;
@@ -21,8 +22,8 @@ pub fn get_dynamic_from_layout_str(
     json: &str,
     img_base: &Path,
     bg_image: Option<String>,
-) -> Result<DynamicImage, Box<dyn Error>> {
-    let mut layout = serde_json::from_str(json).map_err(|err| -> Box<dyn Error> { err.into() })?;
+) -> Result<DynamicImage> {
+    let mut layout = serde_json::from_str(json).map_err(|e| anyhow!(e))?;
     let img = render_layout(&mut layout, img_base, bg_image)?;
     Ok(DynamicImage::ImageRgba8(img))
 }
@@ -31,8 +32,8 @@ pub fn get_dynamic_from_layout_value(
     layout: &Value,
     img_base: &Path,
     bg_image: Option<String>,
-) -> Result<DynamicImage, Box<dyn Error>> {
-    let mut layout = Layout::deserialize(layout).map_err(|err| -> Box<dyn Error> { err.into() })?;
+) -> Result<DynamicImage> {
+    let mut layout = Layout::deserialize(layout).map_err(|e| anyhow!(e))?;
     let img = render_layout(&mut layout, img_base, bg_image)?;
     Ok(DynamicImage::ImageRgba8(img))
 }
@@ -41,8 +42,8 @@ pub fn get_png_from_layout_str(
     json: &str,
     img_base: &Path,
     bg_image: Option<String>,
-) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut layout = serde_json::from_str(json).map_err(|err| -> Box<dyn Error> { err.into() })?;
+) -> Result<Vec<u8>> {
+    let mut layout = serde_json::from_str(json).map_err(|e| anyhow!(e))?;
     get_png_from_layout(&mut layout, img_base, bg_image)
 }
 
@@ -50,8 +51,8 @@ pub fn get_png_from_layout_value(
     layout: &Value,
     img_base: &Path,
     bg_image: Option<String>,
-) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut layout = Layout::deserialize(layout).map_err(|err| -> Box<dyn Error> { err.into() })?;
+) -> Result<Vec<u8>> {
+    let mut layout = Layout::deserialize(layout).map_err(|e| anyhow!(e))?;
     get_png_from_layout(&mut layout, img_base, bg_image)
 }
 
@@ -59,7 +60,7 @@ fn get_png_from_layout(
     layout: &mut Layout,
     img_base: &Path,
     bg_image: Option<String>,
-) -> Result<Vec<u8>, Box<dyn Error>> {
+) -> Result<Vec<u8>> {
     let image = render_layout(layout, img_base, bg_image)?;
 
     let mut bytes = Vec::new();

@@ -1,6 +1,8 @@
 //! This code should be able to render a layout onto a 200x100 canvas, it doesn't quite cover
 //! everything yet, but should be good enough to get a base render
 
+use anyhow::{Result, bail};
+
 use crate::color::{GradientStop, sample_gradient, with_opacity};
 use crate::layout::{CommonFields, Layout, LayoutItem, PixmapSource, Range, Rect};
 
@@ -11,7 +13,6 @@ use crate::components::pixmap::render_pixmap;
 use crate::components::text::render_text;
 use image::{ImageBuffer, Rgba, RgbaImage};
 use log::warn;
-use std::error::Error;
 use std::path::{Path, PathBuf};
 
 type Gradient = Vec<GradientStop>;
@@ -24,7 +25,7 @@ pub(crate) fn render_layout(
     layout: &mut Layout,
     img_base: &Path,
     bg_image: Option<String>,
-) -> Result<RgbaImage, Box<dyn Error>> {
+) -> Result<RgbaImage> {
     validate_layout(layout, img_base)?;
 
     // Create a canvas and begin the work (black by default, should we be transparent?)
@@ -70,7 +71,7 @@ pub(crate) fn render_layout(
     Ok(canvas)
 }
 
-pub fn validate_layout(layout: &mut Layout, img_base: &Path) -> Result<(), String> {
+pub fn validate_layout(layout: &mut Layout, img_base: &Path) -> Result<()> {
     use std::collections::HashMap;
 
     fn rects_overlap(a: &Rect, b: &Rect) -> bool {
@@ -122,7 +123,7 @@ pub fn validate_layout(layout: &mut Layout, img_base: &Path) -> Result<(), Strin
                     warn!("{}", text);
 
                     if STRICT_RENDER {
-                        return Err(text);
+                        bail!(text);
                     }
                 }
             }
