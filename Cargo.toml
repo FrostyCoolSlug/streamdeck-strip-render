@@ -3,6 +3,9 @@ name = "streamdeck-strip-render"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+strict-rendering = []
+
 [dependencies]
 image = { version = "0.25", default-features = false, features = ["png", "bmp", "tiff"] }
 serde = { version = "1.0", features = ["derive"] }
