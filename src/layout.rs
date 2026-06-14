@@ -96,7 +96,7 @@ fn default_opacity() -> f32 {
 }
 
 fn default_background() -> String {
-    "black".to_string()
+    "transparent".to_string()
 }
 
 /// A text item, should map things to usable structs

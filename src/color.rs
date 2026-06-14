@@ -327,6 +327,9 @@ fn named_colour(name: &str) -> Rgba<u8> {
         "yellow" => Rgba([255, 255, 0, 255]),
         "yellowgreen" => Rgba([154, 205, 50, 255]),
 
+        // A transparent colour
+        "transparent" => Rgba([0, 0, 0, 0]),
+
         // Default to white if the colour is not recognised.
         _ => Rgba([255, 255, 255, 255]),
     }
