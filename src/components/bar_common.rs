@@ -190,6 +190,8 @@ fn groove_rect_contains(rect: &Rect, px: u32, py: u32) -> bool {
     offset_x * offset_x + offset_y * offset_y <= radius * radius
 }
 
+const TRAP_START: f32 = 0.9;
+
 fn draw_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32) {
     if rect.width == 0 || rect.height == 0 {
         return;
@@ -205,9 +207,9 @@ fn draw_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: 
     for px in rect.x..stop_x {
         let colour = resolve_colour(style, px, rect, solid_colour);
 
-        // We need to move the top Y position up as we're drawing
         let local_x = px - rect.x;
-        let top_offset = ((local_x as f32 / rect.width as f32) * rect.height as f32) as u32;
+        let top_offset = ((local_x as f32 / rect.width as f32) * rect.height as f32 * TRAP_START
+            + rect.height as f32 * (1.0 - TRAP_START)) as u32;
         let top_y = (rect.y + rect.height)
             .saturating_sub(top_offset)
             .max(rect.y);
@@ -254,8 +256,7 @@ fn trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
     let local_x = px.saturating_sub(rect.x) as f32;
     let local_y = py.saturating_sub(rect.y) as f32;
 
-    // Top edge Y at this X (in local coords): rises from height at x=0 to 0 at x=width
-    let top_edge_y = rect.height as f32 * (1.0 - local_x / rect.width as f32);
+    let top_edge_y = rect.height as f32 * TRAP_START * (1.0 - local_x / rect.width as f32);
 
     local_y >= top_edge_y && local_y < rect.height as f32
 }
