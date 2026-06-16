@@ -30,18 +30,16 @@ pub(crate) fn draw_bar_shape(
     // or Trapezoid respectively. The Double apparently means nothing :D
 
     // Get the function needed for drawing
-    // TODO: Trapezoid
     let draw_fn: fn(&mut RgbaImage, &Rect, &FillStyle, u32) = match subtype {
         BarSubtype::Rectangle | BarSubtype::DoubleRectangle => draw_rect,
-        BarSubtype::DoubleTrapezoid => draw_groove,
+        BarSubtype::DoubleTrapezoid => draw_double_trapezoid,
         BarSubtype::Trapezoid => draw_trapezoid,
         BarSubtype::Groove => draw_groove,
     };
 
-    // TODO: Trapezoid
     let draw_border_fn: fn(&mut RgbaImage, &Rect, Rgba<u8>, u32) = match subtype {
         BarSubtype::Rectangle | BarSubtype::DoubleRectangle => draw_rect_border,
-        BarSubtype::DoubleTrapezoid => draw_groove_border,
+        BarSubtype::DoubleTrapezoid => draw_double_trapezoid_border,
         BarSubtype::Trapezoid => draw_trapezoid_border,
         BarSubtype::Groove => draw_groove_border,
     };
@@ -190,8 +188,11 @@ fn groove_rect_contains(rect: &Rect, px: u32, py: u32) -> bool {
     offset_x * offset_x + offset_y * offset_y <= radius * radius
 }
 
-const TRAP_START: f32 = 0.9;
 
+// Trapezoid Drawing
+
+/// Defines the normalised bottom start point of the trapezoid.
+const TRAP_START: f32 = 0.9;
 fn draw_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32) {
     if rect.width == 0 || rect.height == 0 {
         return;
@@ -259,4 +260,86 @@ fn trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
     let top_edge_y = rect.height as f32 * TRAP_START * (1.0 - local_x / rect.width as f32);
 
     local_y >= top_edge_y && local_y < rect.height as f32
+}
+
+
+
+const DOUBLE_TRAP_MEET: f32 = 0.2;
+fn draw_double_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32) {
+    if rect.width == 0 || rect.height == 0 {
+        return;
+    }
+
+    let fill_width = stop.min(rect.width);
+    let stop_x = (rect.x + fill_width).min(CANVAS_W);
+    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+
+    let is_solid = style.gradient.len() == 1;
+    let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
+
+    for px in rect.x..stop_x {
+        let colour = resolve_colour(style, px, rect, solid_colour);
+        let top_y = rect.y + double_trapezoid_top_offset(rect, px);
+
+        for py in top_y..stop_y {
+            put_blended(canvas, px, py, colour);
+        }
+    }
+}
+
+fn draw_double_trapezoid_border(
+    canvas: &mut RgbaImage,
+    rect: &Rect,
+    colour: Rgba<u8>,
+    border_w: u32,
+) {
+    if border_w == 0 || rect.width == 0 || rect.height == 0 || colour[3] == 0 {
+        return;
+    }
+
+    let clip_x = (rect.x + rect.width).min(CANVAS_W);
+    let clip_y = (rect.y + rect.height).min(CANVAS_H);
+
+    for py in rect.y..clip_y {
+        for px in rect.x..clip_x {
+            if double_trapezoid_contains(rect, px, py)
+                && !double_trapezoid_contains(
+                    &Rect {
+                        x: rect.x + border_w,
+                        y: rect.y + border_w,
+                        width: rect.width.saturating_sub(border_w * 2),
+                        height: rect.height.saturating_sub(border_w * 2),
+                    },
+                    px,
+                    py,
+                )
+            {
+                let dst = *canvas.get_pixel(px, py);
+                canvas.put_pixel(px, py, blend(dst, colour));
+            }
+        }
+    }
+}
+
+fn double_trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
+    if rect.width == 0 || rect.height == 0 {
+        return false;
+    }
+
+    let local_y = py.saturating_sub(rect.y) as f32;
+    let top_offset = double_trapezoid_top_offset(rect, px);
+
+    local_y >= top_offset as f32 && local_y < rect.height as f32
+}
+
+// Cals the top offset of the trapezoid, given an x position
+fn double_trapezoid_top_offset(rect: &Rect, px: u32) -> u32 {
+    let local_x = px.saturating_sub(rect.x) as f32;
+    let t = local_x / rect.width as f32;
+
+    // 0.0 at the edges, 1.0 in the centre.
+    let centre = 1.0 - (2.0 * t - 1.0).abs();
+    let top_frac = 1.0 + (DOUBLE_TRAP_MEET - 1.0) * centre;
+
+    (rect.height as f32 * (1.0 - top_frac)) as u32
 }
