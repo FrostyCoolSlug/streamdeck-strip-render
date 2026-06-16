@@ -33,14 +33,16 @@ pub(crate) fn draw_bar_shape(
     // TODO: Trapezoid
     let draw_fn: fn(&mut RgbaImage, &Rect, &FillStyle, u32) = match subtype {
         BarSubtype::Rectangle | BarSubtype::DoubleRectangle => draw_rect,
-        BarSubtype::Trapezoid | BarSubtype::DoubleTrapezoid => draw_groove,
+        BarSubtype::DoubleTrapezoid => draw_groove,
+        BarSubtype::Trapezoid => draw_trapezoid,
         BarSubtype::Groove => draw_groove,
     };
 
     // TODO: Trapezoid
     let draw_border_fn: fn(&mut RgbaImage, &Rect, Rgba<u8>, u32) = match subtype {
         BarSubtype::Rectangle | BarSubtype::DoubleRectangle => draw_rect_border,
-        BarSubtype::Trapezoid | BarSubtype::DoubleTrapezoid => draw_groove_border,
+        BarSubtype::DoubleTrapezoid => draw_groove_border,
+        BarSubtype::Trapezoid => draw_trapezoid_border,
         BarSubtype::Groove => draw_groove_border,
     };
 
@@ -186,4 +188,74 @@ fn groove_rect_contains(rect: &Rect, px: u32, py: u32) -> bool {
 
     // Return whether this offset is inside the circle (and thus should be drawn)
     offset_x * offset_x + offset_y * offset_y <= radius * radius
+}
+
+fn draw_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32) {
+    if rect.width == 0 || rect.height == 0 {
+        return;
+    }
+
+    let fill_width = stop.min(rect.width);
+    let stop_x = (rect.x + fill_width).min(CANVAS_W);
+    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+
+    let is_solid = style.gradient.len() == 1;
+    let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
+
+    for px in rect.x..stop_x {
+        let colour = resolve_colour(style, px, rect, solid_colour);
+
+        // We need to move the top Y position up as we're drawing
+        let local_x = px - rect.x;
+        let top_offset = ((local_x as f32 / rect.width as f32) * rect.height as f32) as u32;
+        let top_y = (rect.y + rect.height)
+            .saturating_sub(top_offset)
+            .max(rect.y);
+
+        for py in top_y..stop_y {
+            put_blended(canvas, px, py, colour);
+        }
+    }
+}
+
+fn draw_trapezoid_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>, border_w: u32) {
+    if border_w == 0 || rect.width == 0 || rect.height == 0 || colour[3] == 0 {
+        return;
+    }
+
+    let clip_x = (rect.x + rect.width).min(CANVAS_W);
+    let clip_y = (rect.y + rect.height).min(CANVAS_H);
+
+    for py in rect.y..clip_y {
+        for px in rect.x..clip_x {
+            if trapezoid_contains(rect, px, py)
+                && !trapezoid_contains(
+                    &Rect {
+                        x: rect.x + border_w,
+                        y: rect.y + border_w,
+                        width: rect.width.saturating_sub(border_w * 2),
+                        height: rect.height.saturating_sub(border_w * 2),
+                    },
+                    px,
+                    py,
+                )
+            {
+                let dst = *canvas.get_pixel(px, py);
+                canvas.put_pixel(px, py, blend(dst, colour));
+            }
+        }
+    }
+}
+
+fn trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
+    if rect.width == 0 || rect.height == 0 {
+        return false;
+    }
+    let local_x = px.saturating_sub(rect.x) as f32;
+    let local_y = py.saturating_sub(rect.y) as f32;
+
+    // Top edge Y at this X (in local coords): rises from height at x=0 to 0 at x=width
+    let top_edge_y = rect.height as f32 * (1.0 - local_x / rect.width as f32);
+
+    local_y >= top_edge_y && local_y < rect.height as f32
 }
