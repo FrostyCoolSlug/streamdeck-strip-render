@@ -495,7 +495,8 @@ pub struct Range {
     pub max: f32,
 }
 
-
+// This might be useful in the future if an attempt at supersampling ever comes along
+#[allow(unused)]
 pub trait Scale {
     fn scale(&mut self, factor: u32);
 }
