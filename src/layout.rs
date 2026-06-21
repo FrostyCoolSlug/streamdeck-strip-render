@@ -494,3 +494,39 @@ pub struct Range {
     pub min: f32,
     pub max: f32,
 }
+
+
+pub trait Scale {
+    fn scale(&mut self, factor: u32);
+}
+
+impl Scale for Rect {
+    fn scale(&mut self, factor: u32) {
+        self.x *= factor;
+        self.y *= factor;
+        self.width *= factor;
+        self.height *= factor;
+    }
+}
+
+impl Scale for BarCommon {
+    fn scale(&mut self, factor: u32) {
+        self.border_w *= factor;
+    }
+}
+
+impl Scale for BarItem {
+    fn scale(&mut self, factor: u32) {
+        self.common.rect.scale(factor);
+        self.bar_common.scale(factor);
+    }
+}
+
+impl Scale for GBarItem {
+    fn scale(&mut self, factor: u32) {
+        self.common.rect.scale(factor);
+        self.bar_common.scale(factor);
+
+        self.bar_h *= factor;
+    }
+}
