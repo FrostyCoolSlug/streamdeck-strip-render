@@ -7,7 +7,7 @@ use log::warn;
 
 pub(crate) fn render_bar(canvas: &mut RgbaImage, item: &BarItem) {
     let rect = &item.common.rect;
-    if !is_valid_rect(rect) {
+    if !is_valid_rect(rect, canvas) {
         warn!(
             "Rect Extends Outside Canvas for {} - {:?}",
             item.common.key, rect

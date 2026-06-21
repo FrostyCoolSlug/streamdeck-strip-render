@@ -1,14 +1,14 @@
 use crate::STRICT_RENDER;
 use crate::color::{parse_gradient, with_opacity};
 use crate::layout::{PixmapItem, PixmapSource, Rect};
-use crate::render::{CANVAS_H, CANVAS_W, FillStyle, blend, fill_rect, is_valid_rect};
+use crate::render::{FillStyle, blend, fill_rect, is_valid_rect};
 use image::{Rgba, RgbaImage, imageops};
 use log::warn;
 
 pub(crate) fn render_pixmap(canvas: &mut RgbaImage, item: &PixmapItem) {
     let rect = &item.common.rect;
 
-    if !is_valid_rect(rect) {
+    if !is_valid_rect(rect, canvas) {
         warn!(
             "Rect Extends Outside Canvas for {} - {:?}",
             item.common.key, rect
@@ -101,7 +101,7 @@ fn blit_image(canvas: &mut RgbaImage, src: &RgbaImage, rect: &Rect, opacity: f32
             let cx = rect.x + px;
             let cy = rect.y + py;
 
-            if cx >= CANVAS_W || cy >= CANVAS_H {
+            if cx >= canvas.width() || cy >= canvas.height() {
                 continue;
             }
 
@@ -124,7 +124,7 @@ fn draw_checkerboard(canvas: &mut RgbaImage, rect: &Rect, opacity: f32) {
         for px in 0..rect.width {
             let cx = rect.x + px;
             let cy = rect.y + py;
-            if cx >= CANVAS_W || cy >= CANVAS_H {
+            if cx >= canvas.width() || cy >= canvas.height() {
                 continue;
             }
             let c = if (px / tile + py / tile).is_multiple_of(2) {

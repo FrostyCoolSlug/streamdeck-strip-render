@@ -1,7 +1,7 @@
 use crate::STRICT_RENDER;
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{Rect, TextAlignment, TextItem, TextOverflow};
-use crate::render::{CANVAS_H, CANVAS_W, blend, fill_rect, is_valid_rect};
+use crate::render::{blend, fill_rect, is_valid_rect};
 use ab_glyph::{Font, FontVec, PxScale, PxScaleFont, ScaleFont, VariableFont};
 use image::{Rgba, RgbaImage};
 use log::warn;
@@ -16,7 +16,7 @@ pub(crate) static DEFAULT_FONT: LazyLock<Mutex<FontVec>> = LazyLock::new(|| {
 pub(crate) fn render_text(canvas: &mut RgbaImage, item: &TextItem) {
     let rect = &item.common.rect;
 
-    if !is_valid_rect(rect) {
+    if !is_valid_rect(rect, canvas) {
         warn!(
             "Rect Extends Outside Canvas for {} - {:?}",
             item.common.key, rect
@@ -131,8 +131,8 @@ fn draw_glyphs_clipped(
     color: Rgba<u8>,
     rect: &Rect,
 ) {
-    let clip_x = (rect.x + rect.width).min(CANVAS_W) as i32;
-    let clip_y = (rect.y + rect.height).min(CANVAS_H) as i32;
+    let clip_x = (rect.x + rect.width).min(canvas.width()) as i32;
+    let clip_y = (rect.y + rect.height).min(canvas.height()) as i32;
 
     let mut pen_x = text_x;
     let mut last_glyph_id = None;
@@ -159,7 +159,7 @@ fn draw_glyphs_clipped(
                 if px < rect.x as i32 || px >= clip_x || py < rect.y as i32 || py >= clip_y {
                     return;
                 }
-                if px < 0 || py < 0 || px >= CANVAS_W as i32 || py >= CANVAS_H as i32 {
+                if px < 0 || py < 0 || px >= canvas.width() as i32 || py >= canvas.height() as i32 {
                     return;
                 }
 

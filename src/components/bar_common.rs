@@ -1,8 +1,6 @@
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{BarCommon, BarSubtype, CommonFields, Rect};
-use crate::render::{
-    CANVAS_H, CANVAS_W, FillStyle, blend, draw_border, normalise, put_blended, resolve_colour,
-};
+use crate::render::{FillStyle, blend, draw_border, normalise, put_blended, resolve_colour};
 use image::{Rgba, RgbaImage};
 
 pub(crate) fn draw_bar_shape(
@@ -76,8 +74,8 @@ fn draw_rect(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32) 
     }
 
     let fill_width = stop.min(rect.width);
-    let stop_x = (rect.x + fill_width).min(CANVAS_W);
-    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+    let stop_x = (rect.x + fill_width).min(canvas.width());
+    let stop_y = (rect.y + rect.height).min(canvas.height());
 
     let is_solid = style.gradient.len() == 1;
     let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
@@ -105,7 +103,7 @@ fn draw_double_rect(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop
 
     let fill_width = stop.min(rect.width);
     let (start_x, stop_x) = double_fill_range(rect, fill_width);
-    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+    let stop_y = (rect.y + rect.height).min(canvas.height());
 
     let is_solid = style.gradient.len() == 1;
     let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
@@ -132,8 +130,8 @@ fn draw_groove(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32
     };
 
     // The points where we stop rendering
-    let stop_x = (rect.x + stop).min(CANVAS_W);
-    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+    let stop_x = (rect.x + stop).min(canvas.width());
+    let stop_y = (rect.y + rect.height).min(canvas.height());
 
     // The radius of the groove (rounded edges)
     let radius = rect.height as f32 / 2.0;
@@ -172,8 +170,8 @@ fn draw_groove_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>, bor
         height: rect.height.saturating_sub(border_w * 2),
     };
 
-    let clip_x = (rect.x + rect.width).min(CANVAS_W);
-    let clip_y = (rect.y + rect.height).min(CANVAS_H);
+    let clip_x = (rect.x + rect.width).min(canvas.width());
+    let clip_y = (rect.y + rect.height).min(canvas.height());
 
     for py in rect.y..clip_y {
         for px in rect.x..clip_x {
@@ -234,8 +232,8 @@ fn draw_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: 
     }
 
     let fill_width = stop.min(rect.width);
-    let stop_x = (rect.x + fill_width).min(CANVAS_W);
-    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+    let stop_x = (rect.x + fill_width).min(canvas.width());
+    let stop_y = (rect.y + rect.height).min(canvas.height());
 
     let is_solid = style.gradient.len() == 1;
     let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
@@ -261,8 +259,8 @@ fn draw_trapezoid_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>, 
         return;
     }
 
-    let clip_x = (rect.x + rect.width).min(CANVAS_W);
-    let clip_y = (rect.y + rect.height).min(CANVAS_H);
+    let clip_x = (rect.x + rect.width).min(canvas.width());
+    let clip_y = (rect.y + rect.height).min(canvas.height());
 
     for py in rect.y..clip_y {
         for px in rect.x..clip_x {
@@ -310,7 +308,7 @@ fn draw_double_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle,
 
     let fill_width = stop.min(rect.width);
     let (start_x, stop_x) = double_fill_range(rect, fill_width);
-    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+    let stop_y = (rect.y + rect.height).min(canvas.height());
 
     let is_solid = style.gradient.len() == 1;
     let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
@@ -335,8 +333,8 @@ fn draw_double_trapezoid_border(
         return;
     }
 
-    let clip_x = (rect.x + rect.width).min(CANVAS_W);
-    let clip_y = (rect.y + rect.height).min(CANVAS_H);
+    let clip_x = (rect.x + rect.width).min(canvas.width());
+    let clip_y = (rect.y + rect.height).min(canvas.height());
 
     for py in rect.y..clip_y {
         for px in rect.x..clip_x {

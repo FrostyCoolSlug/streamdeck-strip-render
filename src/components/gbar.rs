@@ -2,14 +2,14 @@ use crate::STRICT_RENDER;
 use crate::color::{parse_color, parse_gradient, sample_gradient, with_opacity};
 use crate::components::bar_common::draw_bar_shape;
 use crate::layout::{BarCommon, GBarItem, Rect};
-use crate::render::{CANVAS_H, CANVAS_W, blend, is_valid_rect, normalise};
+use crate::render::{blend, is_valid_rect, normalise};
 use image::{Rgba, RgbaImage};
 use log::warn;
 
 pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
     let rect = &item.common.rect;
 
-    if !is_valid_rect(rect) {
+    if !is_valid_rect(rect, canvas) {
         warn!(
             "Rect Extends Outside Canvas for {} - {:?}",
             item.common.key, rect
@@ -90,15 +90,15 @@ fn draw_triangle_indicator(
 
     for row in 0..height {
         let lx = tip_x.saturating_sub(row);
-        let rx = (tip_x + row).min(CANVAS_W - 1);
+        let rx = (tip_x + row).min(canvas.width() - 1);
         let py = top_y + row;
 
-        if py >= CANVAS_H {
+        if py >= canvas.height() {
             continue;
         }
 
         for px in lx..=rx {
-            if px >= CANVAS_W {
+            if px >= canvas.width() {
                 continue;
             }
 

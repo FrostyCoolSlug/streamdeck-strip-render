@@ -31,7 +31,7 @@ pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Re
     if let Some(bg) = bg_image {
         match image::open(PathBuf::from(bg.clone())) {
             Ok(img) => {
-                if img.width() == CANVAS_W && img.height() == CANVAS_H {
+                if img.width() == canvas.width() && img.height() == canvas.height() {
                     image::imageops::overlay(&mut canvas, &img, 0, 0);
                 } else {
                     warn!(
@@ -121,11 +121,11 @@ pub fn validate_layout(layout: &mut Layout) -> Result<()> {
 }
 
 /// A simple helper to check if a rect is inside the canvas bounds.
-pub(crate) fn is_valid_rect(rect: &Rect) -> bool {
-    rect.x < CANVAS_W
-        && rect.y < CANVAS_H
-        && rect.x + rect.width <= CANVAS_W
-        && rect.y + rect.height <= CANVAS_H
+pub(crate) fn is_valid_rect(rect: &Rect, canvas: &RgbaImage) -> bool {
+    rect.x < canvas.width()
+        && rect.y < canvas.height()
+        && rect.x + rect.width <= canvas.width()
+        && rect.y + rect.height <= canvas.height()
 }
 
 /// Alpha-composite `src` over `dst`.
@@ -157,8 +157,8 @@ pub(crate) fn fill_rect(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle) 
         return;
     }
 
-    let clip_x = (rect.x + rect.width).min(CANVAS_W);
-    let clip_y = (rect.y + rect.height).min(CANVAS_H);
+    let clip_x = (rect.x + rect.width).min(canvas.width());
+    let clip_y = (rect.y + rect.height).min(canvas.height());
 
     let is_solid = style.gradient.len() == 1;
     let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
