@@ -4,7 +4,6 @@
 //! All fields and defaults are taken directly from the JSON schema file.
 
 use base64::Engine;
-use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
