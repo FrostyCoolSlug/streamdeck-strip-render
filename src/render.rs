@@ -224,31 +224,24 @@ pub(crate) fn resolve_colour(
 /// Alpha-composite `src` over `dst`.
 #[inline(always)]
 pub(crate) fn blend(dst: Rgba<u8>, src: Rgba<u8>) -> Rgba<u8> {
-    let sa = src[3] as u32;
-    if sa == 255 {
+    // Short circuit this if we're fully opaque
+    if src[3] == 255 {
         return src;
     }
 
-    let da = dst[3] as u32;
+    let src_alpha = src[3] as f32 / 255.0;
+    let dst_alpha = dst[3] as f32 / 255.0;
 
-    let out_a = sa + da * (255 - sa) / 255;
-    if out_a == 0 {
+    let out_a = src_alpha + dst_alpha * (1.0 - src_alpha);
+    if out_a <= 0.0 {
         return Rgba([0, 0, 0, 0]);
     }
 
-
     // MAAAAAAAAAAATHS, blend based on opacity
-    let inv = 255 * 255 / out_a;
-    let r = (src[0] as u32 * sa * 255 + dst[0] as u32 * da * (255 - sa)) * inv / (255 * 255);
-    let g = (src[1] as u32 * sa * 255 + dst[1] as u32 * da * (255 - sa)) * inv / (255 * 255);
-    let b = (src[2] as u32 * sa * 255 + dst[2] as u32 * da * (255 - sa)) * inv / (255 * 255);
-
-    Rgba([
-        r.min(255) as u8,
-        g.min(255) as u8,
-        b.min(255) as u8,
-        out_a as u8,
-    ])
+    let r = (src[0] as f32 * src_alpha + dst[0] as f32 * dst_alpha * (1.0 - src_alpha)) / out_a;
+    let g = (src[1] as f32 * src_alpha + dst[1] as f32 * dst_alpha * (1.0 - src_alpha)) / out_a;
+    let b = (src[2] as f32 * src_alpha + dst[2] as f32 * dst_alpha * (1.0 - src_alpha)) / out_a;
+    Rgba([r as u8, g as u8, b as u8, (out_a * 255.0) as u8])
 }
 
 /// Blend the current pixel with the given colour, and put it back into the canvas.
