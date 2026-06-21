@@ -102,9 +102,8 @@ fn draw_triangle_indicator(
 
             // Is this pixel attached to the 'forced' inner border?
             let on_inner_l = px >= lx + border_w && px < lx + inner_border_w;
-            let on_inner_r = border_w > 0
-                && px <= rx.saturating_sub(border_w)
-                && px > rx.saturating_sub(inner_border_w);
+            let on_inner_r =
+                px <= rx.saturating_sub(border_w) && px > rx.saturating_sub(inner_border_w);
             let on_inner_b = row < height.saturating_sub(border_w)
                 && row >= height.saturating_sub(inner_border_w);
             let on_inner_border = !on_outer_border && (on_inner_l || on_inner_r || on_inner_b);
