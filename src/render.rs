@@ -20,12 +20,22 @@ type Gradient = Vec<GradientStop>;
 pub const CANVAS_W: u32 = 200;
 pub const CANVAS_H: u32 = 100;
 
+#[cfg(feature = "super-sample")]
+pub const SUPER_SAMPLE_AMOUNT: u32 = 4;
+
 /// Render `layout` onto a fresh 200×100 black canvas and return it.
 pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Result<RgbaImage> {
     validate_layout(layout)?;
 
+    #[cfg(feature = "super-sample")]
+    {
+        use crate::layout::Scale;
+        layout.scale(SUPER_SAMPLE_AMOUNT);
+    }
+
     // Create a canvas and begin the work (black by default, should we be transparent?)
-    let mut canvas: RgbaImage = ImageBuffer::from_pixel(CANVAS_W, CANVAS_H, Rgba([0, 0, 0, 255]));
+    let (canvas_w, canvas_h) = get_canvas_size();
+    let mut canvas: RgbaImage = ImageBuffer::from_pixel(canvas_w, canvas_h, Rgba([0, 0, 0, 255]));
 
     // If we have a background image, load it and overlay it.
     if let Some(bg) = bg_image {
@@ -64,7 +74,44 @@ pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Re
         }
     }
 
-    Ok(canvas)
+    post_process(canvas)
+}
+
+pub fn get_canvas_size() -> (u32, u32) {
+    #[cfg(feature = "super-sample")]
+    {
+        (
+            CANVAS_W * SUPER_SAMPLE_AMOUNT,
+            CANVAS_H * SUPER_SAMPLE_AMOUNT,
+        )
+    }
+
+    #[cfg(not(feature = "super-sample"))]
+    {
+        (CANVAS_W, CANVAS_H)
+    }
+}
+
+fn post_process(canvas: RgbaImage) -> Result<RgbaImage> {
+    let out = {
+        #[cfg(feature = "super-sample")]
+        {
+            use image::imageops::resize;
+            resize(
+                &canvas,
+                CANVAS_W,
+                CANVAS_H,
+                image::imageops::FilterType::Lanczos3,
+            )
+        }
+
+        #[cfg(not(feature = "super-sample"))]
+        {
+            canvas
+        }
+    };
+
+    Ok(out)
 }
 
 pub fn validate_layout(layout: &mut Layout) -> Result<()> {
@@ -127,8 +174,6 @@ pub(crate) fn is_valid_rect(rect: &Rect, canvas: &RgbaImage) -> bool {
         && rect.x + rect.width <= canvas.width()
         && rect.y + rect.height <= canvas.height()
 }
-
-
 
 /// Fill a rectangle with either a solid colour or a gradient.
 pub(crate) fn fill_rect(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle) {
@@ -220,7 +265,6 @@ pub(crate) fn resolve_colour(
     })
 }
 
-
 /// Alpha-composite `src` over `dst`.
 #[inline(always)]
 pub(crate) fn blend(dst: Rgba<u8>, src: Rgba<u8>) -> Rgba<u8> {
@@ -269,8 +313,6 @@ pub(crate) fn put_blended(canvas: &mut RgbaImage, px: u32, py: u32, colour: Rgba
         buf[idx + 3] = out[3];
     }
 }
-
-
 
 // Normalise a value between two points
 pub(crate) fn normalise(value: f32, range: &Range) -> f32 {

@@ -5,6 +5,7 @@ edition = "2024"
 
 [features]
 strict-rendering = []
+super-sample = []
 
 [dependencies]
 image = { version = "0.25", default-features = false, features = ["png", "bmp", "jpeg"] }
