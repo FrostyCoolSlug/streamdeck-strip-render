@@ -1,9 +1,9 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
-use crate::layout::Layout;
+use crate::layout::{Layout, is_svg};
 use crate::render::render_layout;
 use image::codecs::png::PngEncoder;
-use image::{ColorType, DynamicImage, ImageEncoder};
+use image::{ColorType, DynamicImage, ImageEncoder, RgbaImage};
 use serde::Deserialize;
 use serde_json::Value;
 use std::path::Path;
@@ -18,50 +18,45 @@ const STRICT_RENDER: bool = true;
 #[cfg(not(feature = "strict-rendering"))]
 const STRICT_RENDER: bool = false;
 
-pub fn get_dynamic_from_layout_str(
-    json: &str,
+/// A value that can be used as a layout source.
+/// Accepts either a JSON string or an existing `serde_json::Value`.
+pub trait IntoLayoutValue {
+    fn into_layout_value(self) -> Result<Value>;
+}
+
+impl IntoLayoutValue for &str {
+    fn into_layout_value(self) -> Result<Value> {
+        serde_json::from_str(self).map_err(anyhow::Error::from)
+    }
+}
+
+impl IntoLayoutValue for String {
+    fn into_layout_value(self) -> Result<Value> {
+        serde_json::from_str(&self).map_err(anyhow::Error::from)
+    }
+}
+
+impl IntoLayoutValue for Value {
+    fn into_layout_value(self) -> Result<Value> {
+        Ok(self)
+    }
+}
+
+pub fn render_to_image(
+    source: impl IntoLayoutValue,
     img_base: &Path,
     bg_image: Option<String>,
 ) -> Result<DynamicImage> {
-    let mut layout = serde_json::from_str(json).map_err(|e| anyhow!(e))?;
-    let img = render_layout(&mut layout, img_base, bg_image)?;
+    let img = render_to_rgba(source, img_base, bg_image)?;
     Ok(DynamicImage::ImageRgba8(img))
 }
 
-pub fn get_dynamic_from_layout_value(
-    layout: &Value,
-    img_base: &Path,
-    bg_image: Option<String>,
-) -> Result<DynamicImage> {
-    let mut layout = Layout::deserialize(layout).map_err(|e| anyhow!(e))?;
-    let img = render_layout(&mut layout, img_base, bg_image)?;
-    Ok(DynamicImage::ImageRgba8(img))
-}
-
-pub fn get_png_from_layout_str(
-    json: &str,
+pub fn render_to_png(
+    source: impl IntoLayoutValue,
     img_base: &Path,
     bg_image: Option<String>,
 ) -> Result<Vec<u8>> {
-    let mut layout = serde_json::from_str(json).map_err(|e| anyhow!(e))?;
-    get_png_from_layout(&mut layout, img_base, bg_image)
-}
-
-pub fn get_png_from_layout_value(
-    layout: &Value,
-    img_base: &Path,
-    bg_image: Option<String>,
-) -> Result<Vec<u8>> {
-    let mut layout = Layout::deserialize(layout).map_err(|e| anyhow!(e))?;
-    get_png_from_layout(&mut layout, img_base, bg_image)
-}
-
-fn get_png_from_layout(
-    layout: &mut Layout,
-    img_base: &Path,
-    bg_image: Option<String>,
-) -> Result<Vec<u8>> {
-    let image = render_layout(layout, img_base, bg_image)?;
+    let image = render_to_rgba(source, img_base, bg_image)?;
 
     let mut bytes = Vec::new();
     PngEncoder::new(&mut bytes).write_image(
@@ -71,6 +66,35 @@ fn get_png_from_layout(
         ColorType::Rgba8.into(),
     )?;
     Ok(bytes)
+}
+
+fn render_to_rgba(
+    source: impl IntoLayoutValue,
+    img_base: &Path,
+    bg_image: Option<String>,
+) -> Result<RgbaImage> {
+    let mut value = source.into_layout_value()?;
+    fix_relative_paths(&mut value, img_base);
+
+    let mut layout = Layout::deserialize(value).map_err(anyhow::Error::from)?;
+    render_layout(&mut layout, bg_image)
+}
+
+/// Paths are either data:, a raw SVG string, or a path. This function attempts to locate
+/// the paths and fully resolve them.
+fn fix_relative_paths(value: &mut Value, base: &Path) {
+    let Some(items) = value["items"].as_array_mut() else {
+        return;
+    };
+    for item in items {
+        if item["type"] == "pixmap"
+            && let Some(v) = item["value"].as_str()
+            && !v.starts_with("data:")
+            && !is_svg(v)
+        {
+            item["value"] = Value::String(base.join(v).to_string_lossy().into_owned());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -124,8 +148,8 @@ mod tests {
             let json = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
 
-            let img = get_png_from_layout_str(
-                &json,
+            let img = render_to_png(
+                json,
                 path.parent().expect("Failed to fetch parent path"),
                 None,
             )
