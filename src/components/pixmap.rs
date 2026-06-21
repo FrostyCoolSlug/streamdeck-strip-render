@@ -55,10 +55,9 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
             }
 
             image::open(path)
-            .ok()
-            .map(|i| resize_to_rect(i.to_rgba8(), rect))
+                .ok()
+                .map(|i| resize_to_rect(i.to_rgba8(), rect))
         }
-
 
         PixmapSource::Base64(data) => {
             use base64::Engine;
