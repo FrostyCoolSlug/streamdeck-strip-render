@@ -43,14 +43,19 @@ pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
 
     // Draw the triangle indicator in the lower portion, first get its position
     let fraction = normalise(item.bar_common.value, &item.bar_common.range);
-    let indicator_y = rect.y + rect.height.saturating_sub(indicator_height);
+
+    // Try and position the tip of the triangle vertically centered to the middle of the value bar
+    let target_tip_y = rect.y + bar_height / 2;
+    let max_tip_y = rect.y + rect.height.saturating_sub(indicator_height);
+
+    // Work with best possible position (if we don't fit, move)
+    let indicator_y = target_tip_y.min(max_tip_y);
     let tip_x = rect.x + (rect.width as f32 * fraction) as u32;
 
     // We need the background stops so we can colour the triangle
     let bg_stops = parse_gradient(&item.bar_common.bar_bg_c);
 
     // Get the value, and find the gradient colour at that point
-    let fraction = normalise(item.bar_common.value, &item.bar_common.range);
     let ind_color = with_opacity(sample_gradient(&bg_stops, fraction), item.common.opacity);
 
     // Get the border colour
