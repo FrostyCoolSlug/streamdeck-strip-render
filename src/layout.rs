@@ -4,6 +4,7 @@
 //! All fields and defaults are taken directly from the JSON schema file.
 
 use base64::Engine;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -263,8 +264,15 @@ fn parse_pixmap(input: &str) -> PixmapSource {
     PixmapSource::File(s.to_string())
 }
 
-fn is_svg(s: &str) -> bool {
-    s.trim_start().contains("<svg")
+pub fn is_svg(s: &str) -> bool {
+    let s = s.trim_start();
+    if s.starts_with("<svg") {
+        return true;
+    }
+    if s.starts_with("<?xml") {
+        return s.contains("<svg");
+    }
+    false
 }
 
 fn parse_data_url(s: &str) -> Option<PixmapSource> {
