@@ -128,28 +128,7 @@ pub(crate) fn is_valid_rect(rect: &Rect, canvas: &RgbaImage) -> bool {
         && rect.y + rect.height <= canvas.height()
 }
 
-/// Alpha-composite `src` over `dst`.
-#[inline]
-pub(crate) fn blend(dst: Rgba<u8>, src: Rgba<u8>) -> Rgba<u8> {
-    // Short circuit this if we're fully opaque
-    if src[3] == 255 {
-        return src;
-    }
 
-    let src_alpha = src[3] as f32 / 255.0;
-    let dst_alpha = dst[3] as f32 / 255.0;
-
-    let out_a = src_alpha + dst_alpha * (1.0 - src_alpha);
-    if out_a < 1e-5 {
-        return Rgba([0, 0, 0, 0]);
-    }
-
-    // MAAAAAAAAAAATHS, blend based on opacity
-    let r = (src[0] as f32 * src_alpha + dst[0] as f32 * dst_alpha * (1.0 - src_alpha)) / out_a;
-    let g = (src[1] as f32 * src_alpha + dst[1] as f32 * dst_alpha * (1.0 - src_alpha)) / out_a;
-    let b = (src[2] as f32 * src_alpha + dst[2] as f32 * dst_alpha * (1.0 - src_alpha)) / out_a;
-    Rgba([r as u8, g as u8, b as u8, (out_a * 255.0) as u8])
-}
 
 /// Fill a rectangle with either a solid colour or a gradient.
 pub(crate) fn fill_rect(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle) {
@@ -241,16 +220,64 @@ pub(crate) fn resolve_colour(
     })
 }
 
-#[inline]
+
+/// Alpha-composite `src` over `dst`.
+#[inline(always)]
+pub(crate) fn blend(dst: Rgba<u8>, src: Rgba<u8>) -> Rgba<u8> {
+    let sa = src[3] as u32;
+    if sa == 255 {
+        return src;
+    }
+
+    let da = dst[3] as u32;
+
+    let out_a = sa + da * (255 - sa) / 255;
+    if out_a == 0 {
+        return Rgba([0, 0, 0, 0]);
+    }
+
+
+    // MAAAAAAAAAAATHS, blend based on opacity
+    let inv = 255 * 255 / out_a;
+    let r = (src[0] as u32 * sa * 255 + dst[0] as u32 * da * (255 - sa)) * inv / (255 * 255);
+    let g = (src[1] as u32 * sa * 255 + dst[1] as u32 * da * (255 - sa)) * inv / (255 * 255);
+    let b = (src[2] as u32 * sa * 255 + dst[2] as u32 * da * (255 - sa)) * inv / (255 * 255);
+
+    Rgba([
+        r.min(255) as u8,
+        g.min(255) as u8,
+        b.min(255) as u8,
+        out_a as u8,
+    ])
+}
+
 /// Blend the current pixel with the given colour, and put it back into the canvas.
+#[inline(always)]
 pub(crate) fn put_blended(canvas: &mut RgbaImage, px: u32, py: u32, colour: Rgba<u8>) {
+    let width = canvas.width() as usize;
+
+    // Get the start byte of the pixel, and the buffer to write to.
+    let idx = ((py as usize) * width + (px as usize)) * 4;
+    let buf = canvas.as_flat_samples_mut().samples;
+
     if colour[3] == 255 {
-        canvas.put_pixel(px, py, colour);
+        buf[idx] = colour[0];
+        buf[idx + 1] = colour[1];
+        buf[idx + 2] = colour[2];
+        buf[idx + 3] = 255;
     } else {
-        let dst = *canvas.get_pixel(px, py);
-        canvas.put_pixel(px, py, blend(dst, colour));
+        let dst = [buf[idx], buf[idx + 1], buf[idx + 2], buf[idx + 3]];
+
+        let out = blend(Rgba(dst), colour);
+
+        buf[idx] = out[0];
+        buf[idx + 1] = out[1];
+        buf[idx + 2] = out[2];
+        buf[idx + 3] = out[3];
     }
 }
+
+
 
 // Normalise a value between two points
 pub(crate) fn normalise(value: f32, range: &Range) -> f32 {
