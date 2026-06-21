@@ -80,10 +80,8 @@ fn draw_triangle_indicator(
     let inner_border_w = border_w + 1; // 1px inset from outer border
 
     for row in 0..height {
-        let half_w = (row as f32 / 3.0_f32.sqrt()).round() as u32;
-
-        let lx = tip_x.saturating_sub(half_w);
-        let rx = (tip_x + half_w).min(CANVAS_W - 1);
+        let lx = tip_x.saturating_sub(row);
+        let rx = (tip_x + row).min(CANVAS_W - 1);
         let py = top_y + row;
 
         if py >= CANVAS_H {
