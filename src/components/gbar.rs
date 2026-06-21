@@ -51,6 +51,7 @@ pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
 
     // Get the border colour
     let border_c = parse_color(&item.bar_common.bar_border_c);
+    let border_w = item.bar_common.border_w;
 
     draw_triangle_indicator(
         canvas,
@@ -59,7 +60,7 @@ pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
         indicator_height,
         ind_color,
         border_c,
-        1,
+        border_w,
     );
 }
 
@@ -75,6 +76,8 @@ fn draw_triangle_indicator(
     if height == 0 {
         return;
     }
+    let inner_border_c: Rgba<u8> = Rgba([128, 128, 128, 255]);
+    let inner_border_w = border_w + 1; // 1px inset from outer border
 
     for row in 0..height {
         let half_w = (row as f32 / 3.0_f32.sqrt()).round() as u32;
@@ -92,16 +95,33 @@ fn draw_triangle_indicator(
                 continue;
             }
 
-            let on_left_edge = px < lx + border_w;
-            let on_right_edge = border_w > 0 && px > rx.saturating_sub(border_w);
-            let on_bottom_edge = row >= height.saturating_sub(border_w);
+            // Is this pixel attached to the 'main' border
+            let on_outer_l = px < lx + border_w;
+            let on_outer_r = border_w > 0 && px > rx.saturating_sub(border_w);
+            let on_outer_b = row >= height.saturating_sub(border_w);
+            let on_outer_border =
+                border_w > 0 && border_c[3] > 0 && (on_outer_l || on_outer_r || on_outer_b);
 
-            let on_edge = border_w > 0
-                && border_c[3] > 0
-                && (on_left_edge || on_right_edge || on_bottom_edge);
+            // Is this pixel attached to the 'forced' inner border?
+            let on_inner_l = px >= lx + border_w && px < lx + inner_border_w;
+            let on_inner_r = border_w > 0
+                && px <= rx.saturating_sub(border_w)
+                && px > rx.saturating_sub(inner_border_w);
+            let on_inner_b = row < height.saturating_sub(border_w)
+                && row >= height.saturating_sub(inner_border_w);
+            let on_inner_border = !on_outer_border && (on_inner_l || on_inner_r || on_inner_b);
+
+            // If we're on a border, colour it.
+            let pixel_color = if on_outer_border {
+                border_c
+            } else if on_inner_border {
+                inner_border_c
+            } else {
+                color
+            };
 
             let dst = *canvas.get_pixel(px, py);
-            canvas.put_pixel(px, py, blend(dst, if on_edge { border_c } else { color }));
+            canvas.put_pixel(px, py, blend(dst, pixel_color));
         }
     }
 }
