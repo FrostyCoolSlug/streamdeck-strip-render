@@ -333,18 +333,19 @@ fn draw_double_trapezoid_border(
     let clip_x = (rect.x + rect.width).min(canvas.width());
     let clip_y = (rect.y + rect.height).min(canvas.height());
 
-    for py in rect.y..clip_y {
-        for px in rect.x..clip_x {
-            if !double_trapezoid_contains(rect, px, py) {
+    for px in rect.x..clip_x {
+        let top_y = rect.y + double_trapezoid_top_offset(rect, px);
+        let bottom_y = rect.y + rect.height;
+
+        for py in rect.y..clip_y {
+            if py < top_y || py >= bottom_y {
                 continue;
             }
 
-            // Again, see if this pixel is under border_w distance from the edge of the shape.
-            let is_border = px - rect.x < border_w
-                || rect.x + rect.width - px <= border_w
-                || rect.y + rect.height - py <= border_w
-                || (0..=border_w)
-                    .any(|d| !double_trapezoid_contains(rect, px, py.saturating_sub(d)));
+            let is_border = (py - top_y) < border_w
+                || (bottom_y - py) <= border_w
+                || (px - rect.x) < border_w
+                || (rect.x + rect.width - px) <= border_w;
 
             if is_border {
                 let dst = *canvas.get_pixel(px, py);
@@ -352,22 +353,6 @@ fn draw_double_trapezoid_border(
             }
         }
     }
-}
-
-fn double_trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
-    if rect.width == 0 || rect.height == 0 {
-        return false;
-    }
-
-    // Fast fail if drawing outside rect
-    if px < rect.x || px >= rect.x + rect.width || py < rect.y || py >= rect.y + rect.height {
-        return false;
-    }
-
-    let local_y = py.saturating_sub(rect.y) as f32;
-    let top_offset = double_trapezoid_top_offset(rect, px);
-
-    local_y >= top_offset as f32 && local_y < rect.height as f32
 }
 
 // Cals the top offset of the trapezoid, given an x position
