@@ -6,6 +6,16 @@ all the values for the fields, it's the callers responsibility to manage the lay
 **NOTE**: This is not perfect and will likely need small adjustments over time when plugins are found that do
 other stuff.
 
+## Feature Flags
+
+| Feature            | Description                                                                                      |
+|--------------------|--------------------------------------------------------------------------------------------------|
+| `strict-rendering` | Rejects entire layouts on z-index overlaps. Ignores layout items which exceed the canvas size. |
+| `super-sample`     | Renders at 4× resolution and downsamples for improved visual quality.                            |
+
+*Note:* The `super-sample` feature will disable itself in debug builds. In debug mode, image rendering can exceed 150ms,
+whereas release builds are typically closer to ~10ms. The delay can give the appearance of a laggy UI on the deck.
+
 ## Tests
 
 `cargo test` will find any json files in the `test-data` directory and attempt to render them. The 'final' images
@@ -21,13 +31,7 @@ can confirm how they're supposed to render.
 
 - Most examples don't present the same way they should render
     - I'm wondering whether things have internal paddings / margins that aren't documented
-- It might make sense to render some widgets at 2x then resize to introduce some aliasing
-- The Stream Deck app ignores widgets that render past the edge of the canvas, I just warn and clip.
-  - There's a `FULL_VALIDATION` flag in lib.rs which will prevent rendering these widgets
-- Rects should never overlap on the same z-index, I currently just warn rather than reject the layout
-  - There's a `FULL_VALIDATION` flag in lib.rs which will reject layouts that do this
 - The canvas is currently black by default, but this may need to be transparent
-- This should probably have some logging :D
 
 ### Text
 
@@ -40,16 +44,3 @@ can confirm how they're supposed to render.
 - Missing or unable to process pixmaps are rendered as checkerboards
 - Images currently scale to fit the rect
 - Images don't maintain aspect ratio when resizing
-
-### Bar
-
-- Subtypes 2 & 3 (Trapezoid) not implemented, will render as groove
-- I have no idea how DoubleTrapezoid or DoubleRectangle work from a value perspective
-    - My understanding is that the Doubles are purely cosmetic, the same value should render in both
-- Bars currently stretch to fit the rect, but the example renders don't do that.
-
-### GBar
-
-- All Bar related issues apply here too
-- The arrow looks terrible, might need aliasing
-- Are borders on the arrows forced?
