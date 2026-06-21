@@ -1,7 +1,7 @@
 use crate::STRICT_RENDER;
 use crate::color::{parse_color, parse_gradient, sample_gradient, with_opacity};
 use crate::components::bar_common::draw_bar_shape;
-use crate::layout::{GBarItem, Rect};
+use crate::layout::{BarCommon, GBarItem, Rect};
 use crate::render::{CANVAS_H, CANVAS_W, blend, is_valid_rect, normalise};
 use image::{Rgba, RgbaImage};
 use log::warn;
@@ -34,7 +34,11 @@ pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
             height: bar_height,
         };
 
-        draw_bar_shape(canvas, &common, &item.bar_common);
+        let bar_common = BarCommon {
+            value: 0.0,
+            ..item.bar_common.clone()
+        };
+        draw_bar_shape(canvas, &common, &bar_common);
     }
 
     // Draw the triangle indicator in the lower portion, first get its position
