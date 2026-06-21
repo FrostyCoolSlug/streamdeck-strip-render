@@ -20,15 +20,18 @@ type Gradient = Vec<GradientStop>;
 pub const CANVAS_W: u32 = 200;
 pub const CANVAS_H: u32 = 100;
 
-#[cfg(feature = "super-sample")]
-pub const SUPER_SAMPLE_AMOUNT: u32 = 4;
+#[cfg(all(feature = "super-sample", not(debug_assertions)))]
+const ENABLE_SUPER_SAMPLE: bool = true;
+
+#[cfg(not(all(feature = "super-sample", not(debug_assertions))))]
+const ENABLE_SUPER_SAMPLE: bool = false;
+const SUPER_SAMPLE_AMOUNT: u32 = 4;
 
 /// Render `layout` onto a fresh 200×100 black canvas and return it.
 pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Result<RgbaImage> {
     validate_layout(layout)?;
 
-    #[cfg(feature = "super-sample")]
-    {
+    if ENABLE_SUPER_SAMPLE {
         use crate::layout::Scale;
         layout.scale(SUPER_SAMPLE_AMOUNT);
     }
@@ -78,24 +81,19 @@ pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Re
 }
 
 pub fn get_canvas_size() -> (u32, u32) {
-    #[cfg(feature = "super-sample")]
-    {
+    if ENABLE_SUPER_SAMPLE {
         (
             CANVAS_W * SUPER_SAMPLE_AMOUNT,
             CANVAS_H * SUPER_SAMPLE_AMOUNT,
         )
-    }
-
-    #[cfg(not(feature = "super-sample"))]
-    {
+    } else {
         (CANVAS_W, CANVAS_H)
     }
 }
 
 fn post_process(canvas: RgbaImage) -> Result<RgbaImage> {
     let out = {
-        #[cfg(feature = "super-sample")]
-        {
+        if ENABLE_SUPER_SAMPLE {
             use image::imageops::resize;
             resize(
                 &canvas,
@@ -103,10 +101,7 @@ fn post_process(canvas: RgbaImage) -> Result<RgbaImage> {
                 CANVAS_H,
                 image::imageops::FilterType::Lanczos3,
             )
-        }
-
-        #[cfg(not(feature = "super-sample"))]
-        {
+        } else {
             canvas
         }
     };
