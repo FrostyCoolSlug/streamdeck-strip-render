@@ -259,20 +259,35 @@ fn draw_trapezoid_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>, 
         return;
     }
 
-    let clip_x = (rect.x + rect.width).min(canvas.width());
-    let clip_y = (rect.y + rect.height).min(canvas.height());
+    let stop_x = (rect.x + rect.width).min(canvas.width());
+    let stop_y = (rect.y + rect.height).min(canvas.height());
 
-    for py in rect.y..clip_y {
-        for px in rect.x..clip_x {
-            if !trapezoid_contains(rect, px, py) {
+    for px in rect.x..stop_x {
+        let local_x = px - rect.x;
+
+        // Same top offset as above
+        let top_offset = ((local_x as f32 / rect.width as f32) * rect.height as f32 * TRAP_START
+            + rect.height as f32 * (1.0 - TRAP_START)) as u32;
+        let top_y = (rect.y + rect.height)
+            .saturating_sub(top_offset)
+            .max(rect.y);
+
+        let bottom_y = rect.y + rect.height;
+
+        let x_left = rect.x;
+        let x_right = rect.x + rect.width;
+
+        for py in rect.y..stop_y {
+            // Must be inside trapezoid vertically
+            if py < top_y || py >= bottom_y {
                 continue;
             }
 
-            // Find out if this pixel is under border_w distance from the edge of the trapezoid.
-            let is_border = px - rect.x < border_w
-                || rect.x + rect.width - px <= border_w
-                || rect.y + rect.height - py <= border_w
-                || (0..=border_w).any(|d| !trapezoid_contains(rect, px, py.saturating_sub(d)));
+            // Distance-to-edge checks
+            let is_border = (py - top_y) < border_w
+                || (bottom_y - py) <= border_w
+                || (px - x_left) < border_w
+                || (x_right - px) <= border_w;
 
             if is_border {
                 let dst = *canvas.get_pixel(px, py);
@@ -280,24 +295,6 @@ fn draw_trapezoid_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>, 
             }
         }
     }
-}
-
-fn trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
-    if rect.width == 0 || rect.height == 0 {
-        return false;
-    }
-
-    // Fast fail if drawing outside rect
-    if px < rect.x || px >= rect.x + rect.width || py < rect.y || py >= rect.y + rect.height {
-        return false;
-    }
-
-    let local_x = px.saturating_sub(rect.x) as f32;
-    let local_y = py.saturating_sub(rect.y) as f32;
-
-    let top_edge_y = rect.height as f32 * TRAP_START * (1.0 - local_x / rect.width as f32);
-
-    local_y >= top_edge_y && local_y < rect.height as f32
 }
 
 const DOUBLE_TRAP_MEET: f32 = 0.2;
