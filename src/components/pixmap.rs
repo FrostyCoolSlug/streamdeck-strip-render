@@ -37,39 +37,12 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
     match source {
         PixmapSource::None => None,
 
-        PixmapSource::File(path) => {
-            if path.ends_with(".svg") {
-                // Use an SVG renderer here instead of image
-                let opt = usvg::Options::default();
-                let data = std::fs::read(path).ok()?;
-                let tree = usvg::Tree::from_data(&data, &opt).ok()?;
-                let (w, h) = (rect.width, rect.height);
-                let mut pixmap = tiny_skia::Pixmap::new(w, h)?;
-                let transform = tiny_skia::Transform::from_scale(
-                    w as f32 / tree.size().width(),
-                    h as f32 / tree.size().height(),
-                );
-                resvg::render(&tree, transform, &mut pixmap.as_mut());
-                let img = RgbaImage::from_raw(w, h, pixmap.take())?;
-                return Some(img);
-            }
+        PixmapSource::File(path) => image::open(path)
+            .ok()
+            .map(|i| resize_to_rect(i.to_rgba8(), rect)),
 
-            image::open(path)
-                .ok()
-                .map(|i| resize_to_rect(i.to_rgba8(), rect))
-        }
-
-        PixmapSource::Base64(data) => {
-            use base64::Engine;
-
-            let (header, payload) = data.split_once(',')?;
-            if !header.contains("base64") {
-                return None;
-            }
-            let bytes = base64::engine::general_purpose::STANDARD
-                .decode(payload)
-                .ok()?;
-            let img = image::load_from_memory(&bytes).ok()?.to_rgba8();
+        PixmapSource::Bytes(bytes) => {
+            let img = image::load_from_memory(bytes).ok()?.to_rgba8();
             Some(resize_to_rect(img, rect))
         }
 

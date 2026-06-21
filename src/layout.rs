@@ -3,6 +3,7 @@
 //! https://schemas.elgato.com/streamdeck/plugins/layout.json
 //! All fields and defaults are taken directly from the JSON schema file.
 
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -221,7 +222,7 @@ fn default_pixmap_source() -> PixmapSource {
 #[derive(Debug, Clone, Serialize)]
 pub enum PixmapSource {
     File(String),
-    Base64(String),
+    Bytes(Vec<u8>),
     Svg(String),
     None,
 }
@@ -243,24 +244,45 @@ fn parse_pixmap(input: &str) -> PixmapSource {
         return PixmapSource::None;
     }
 
-    // Base64 encoded image
     if s.starts_with("data:image/") {
-        return PixmapSource::Base64(s.to_string());
+        return parse_data_url(s).unwrap_or(PixmapSource::None);
     }
 
-    // SVG Check
     if is_svg(s) {
         return PixmapSource::Svg(s.to_string());
     }
 
-    // Assume file path
+    // Try and short-circuit the SVG checks here
+    if s.ends_with(".svg")
+        && let Ok(contents) = std::fs::read_to_string(s)
+        && is_svg(&contents)
+    {
+        return PixmapSource::Svg(contents);
+    }
+
     PixmapSource::File(s.to_string())
 }
 
 fn is_svg(s: &str) -> bool {
-    let s = s.trim_start();
+    s.trim_start().contains("<svg")
+}
 
-    s.starts_with("<?xml") || s.starts_with("<svg") || s.contains("<svg")
+fn parse_data_url(s: &str) -> Option<PixmapSource> {
+    let (header, payload) = s.split_once(',')?;
+    if !header.contains("base64") {
+        return None;
+    }
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(payload)
+        .ok()?;
+
+    // If an SVG is being passed in as base64, handle it as an SVG
+    if header.contains("image/svg+xml") {
+        Some(PixmapSource::Svg(String::from_utf8(bytes).ok()?))
+    } else {
+        Some(PixmapSource::Bytes(bytes))
+    }
 }
 
 /// Common fields for bar and gbar
