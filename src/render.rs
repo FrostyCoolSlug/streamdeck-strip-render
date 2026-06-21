@@ -29,6 +29,8 @@ const SUPER_SAMPLE_AMOUNT: u32 = 4;
 
 /// Render `layout` onto a fresh 200×100 black canvas and return it.
 pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Result<RgbaImage> {
+    warn_supersample_disabled_once();
+
     validate_layout(layout)?;
 
     if ENABLE_SUPER_SAMPLE {
@@ -78,6 +80,19 @@ pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Re
     }
 
     post_process(canvas)
+}
+
+/// Warns once if super-sampling is disable due to being in debug mode.
+fn warn_supersample_disabled_once() {
+    #[cfg(all(feature = "super-sample", debug_assertions))]
+    {
+        use std::sync::Once;
+
+        static ONCE: Once = Once::new();
+        ONCE.call_once(|| {
+            warn!("Super-sampling is disabled in debug builds");
+        });
+    }
 }
 
 pub fn get_canvas_size() -> (u32, u32) {
