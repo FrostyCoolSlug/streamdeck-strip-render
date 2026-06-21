@@ -22,28 +22,24 @@ pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
 
     // bar_h is the indicator triangle height; the bar occupies the rest of the rect.
     let indicator_height = item.bar_h.min(rect.height);
-    let bar_height = rect.height.saturating_sub(indicator_height);
-
-    // We need to adjust the rect to accommodate the indicator triangle
-    let mut common = item.common.clone();
-    common.rect = Rect {
-        x: item.common.rect.x,
-        y: item.common.rect.y,
-        width: item.common.rect.width,
-        height: bar_height,
-    };
+    let bar_height = indicator_height;
 
     // Draw the bar in the upper portion
     if bar_height > 0 {
-        let mut bar_common = item.bar_common.clone();
-        bar_common.value = 0.0;
+        let mut common = item.common.clone();
+        common.rect = Rect {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: bar_height,
+        };
 
-        draw_bar_shape(canvas, &common, &bar_common);
+        draw_bar_shape(canvas, &common, &item.bar_common);
     }
 
     // Draw the triangle indicator in the lower portion, first get its position
     let fraction = normalise(item.bar_common.value, &item.bar_common.range);
-    let indicator_y = item.common.rect.y + (bar_height / 2);
+    let indicator_y = rect.y + rect.height.saturating_sub(indicator_height);
     let tip_x = rect.x + (rect.width as f32 * fraction) as u32;
 
     // We need the background stops so we can colour the triangle
