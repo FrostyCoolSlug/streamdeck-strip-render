@@ -26,29 +26,39 @@ pub(crate) fn draw_bar_shape(
     let fraction = normalise(bar_common.value, &bar_common.range);
     let subtype = bar_common.subtype;
 
-    // In the official app, DoubleRectangle and DoubleTrapezoid render as a single Rectangle
-    // or Trapezoid respectively. The Double apparently means nothing :D
-
     // Get the function needed for drawing
     let draw_fn: fn(&mut RgbaImage, &Rect, &FillStyle, u32) = match subtype {
-        BarSubtype::Rectangle | BarSubtype::DoubleRectangle => draw_rect,
+        BarSubtype::Rectangle => draw_rect,
+        BarSubtype::DoubleRectangle => draw_double_rect,
         BarSubtype::DoubleTrapezoid => draw_double_trapezoid,
         BarSubtype::Trapezoid => draw_trapezoid,
         BarSubtype::Groove => draw_groove,
     };
 
     let draw_border_fn: fn(&mut RgbaImage, &Rect, Rgba<u8>, u32) = match subtype {
+        // Recycle rect border for double rect, they're the same.
         BarSubtype::Rectangle | BarSubtype::DoubleRectangle => draw_rect_border,
         BarSubtype::DoubleTrapezoid => draw_double_trapezoid_border,
         BarSubtype::Trapezoid => draw_trapezoid_border,
         BarSubtype::Groove => draw_groove_border,
     };
 
+    // To simplify double drawing, we draw the background 0% -> 50%, then 50% -> 100% in two
+    // separate calls, otherwise everything would need to handle a 'special' case, and I want to
+    // keep this as readable as possible.
+    let is_double = matches!(
+        subtype,
+        BarSubtype::DoubleRectangle | BarSubtype::DoubleTrapezoid
+    );
+
     // Draw the bar base
     draw_fn(canvas, &rect, &bg, rect.width);
+    if is_double {
+        draw_fn(canvas, &rect, &bg, 0);
+    }
 
-    // If we have a value > 0, draw the fill
-    if fraction > 0.0 {
+    // If we have a value > 0 (or we're a double), draw the fill
+    if fraction > 0.0 || is_double {
         let fill_w = (rect.width as f32 * fraction) as u32;
         draw_fn(canvas, &rect, &fill, fill_w);
     }
@@ -85,6 +95,27 @@ fn draw_rect_border(canvas: &mut RgbaImage, rect: &Rect, border_c: Rgba<u8>, bor
         return;
     }
     draw_border(canvas, rect, border_c, border_w);
+}
+
+// Double Rectangle Drawing
+fn draw_double_rect(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32) {
+    if rect.width == 0 || rect.height == 0 {
+        return;
+    }
+
+    let fill_width = stop.min(rect.width);
+    let (start_x, stop_x) = double_fill_range(rect, fill_width);
+    let stop_y = (rect.y + rect.height).min(CANVAS_H);
+
+    let is_solid = style.gradient.len() == 1;
+    let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
+
+    for px in start_x..stop_x {
+        let colour = resolve_colour(style, px, rect, solid_colour);
+        for py in rect.y..stop_y {
+            put_blended(canvas, px, py, colour);
+        }
+    }
 }
 
 // Groove Drawing
@@ -188,7 +219,6 @@ fn groove_rect_contains(rect: &Rect, px: u32, py: u32) -> bool {
     offset_x * offset_x + offset_y * offset_y <= radius * radius
 }
 
-
 // Trapezoid Drawing
 
 /// Defines the normalised bottom start point of the trapezoid.
@@ -262,8 +292,6 @@ fn trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
     local_y >= top_edge_y && local_y < rect.height as f32
 }
 
-
-
 const DOUBLE_TRAP_MEET: f32 = 0.2;
 fn draw_double_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle, stop: u32) {
     if rect.width == 0 || rect.height == 0 {
@@ -271,13 +299,13 @@ fn draw_double_trapezoid(canvas: &mut RgbaImage, rect: &Rect, style: &FillStyle,
     }
 
     let fill_width = stop.min(rect.width);
-    let stop_x = (rect.x + fill_width).min(CANVAS_W);
+    let (start_x, stop_x) = double_fill_range(rect, fill_width);
     let stop_y = (rect.y + rect.height).min(CANVAS_H);
 
     let is_solid = style.gradient.len() == 1;
     let solid_colour = is_solid.then(|| with_opacity(style.gradient[0].color, style.opacity));
 
-    for px in rect.x..stop_x {
+    for px in start_x..stop_x {
         let colour = resolve_colour(style, px, rect, solid_colour);
         let top_y = rect.y + double_trapezoid_top_offset(rect, px);
 
@@ -342,4 +370,20 @@ fn double_trapezoid_top_offset(rect: &Rect, px: u32) -> u32 {
     let top_frac = 1.0 + (DOUBLE_TRAP_MEET - 1.0) * centre;
 
     (rect.height as f32 * (1.0 - top_frac)) as u32
+}
+
+// Used in DoubleRectangle and DoubleTrapezoid to calculate the start and end of the fill range
+fn double_fill_range(rect: &Rect, stop: u32) -> (u32, u32) {
+    let centre = rect.width / 2;
+    let fraction = stop as f32 / rect.width as f32;
+
+    if fraction <= 0.5 {
+        let start = rect.x + (rect.width as f32 * fraction) as u32;
+        let end = rect.x + centre;
+        (start, end)
+    } else {
+        let start = rect.x + centre;
+        let end = rect.x + (rect.width as f32 * fraction) as u32;
+        (start, end)
+    }
 }
