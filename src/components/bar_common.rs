@@ -1,7 +1,7 @@
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{BarCommon, BarSubtype, CommonFields, Rect};
 use crate::render::{
-    blend, draw_border, normalise, put_blended, resolve_colour, FillStyle, CANVAS_H, CANVAS_W,
+    CANVAS_H, CANVAS_W, FillStyle, blend, draw_border, normalise, put_blended, resolve_colour,
 };
 use image::{Rgba, RgbaImage};
 
@@ -271,12 +271,10 @@ fn draw_trapezoid_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>, 
             }
 
             // Find out if this pixel is under border_w distance from the edge of the trapezoid.
-            let is_border = (0..border_w).any(|d| {
-                px - rect.x < border_w                                          // left
-                    || rect.x + rect.width - px <= border_w                     // right
-                    || rect.y + rect.height - py <= border_w                    // bottom
-                    || !trapezoid_contains(rect, px, py.saturating_sub(d + 1))  // top slope
-            });
+            let is_border = px - rect.x < border_w
+                || rect.x + rect.width - px <= border_w
+                || rect.y + rect.height - py <= border_w
+                || (0..=border_w).any(|d| !trapezoid_contains(rect, px, py.saturating_sub(d)));
 
             if is_border {
                 let dst = *canvas.get_pixel(px, py);
