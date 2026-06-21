@@ -340,18 +340,18 @@ fn draw_double_trapezoid_border(
 
     for py in rect.y..clip_y {
         for px in rect.x..clip_x {
-            if double_trapezoid_contains(rect, px, py)
-                && !double_trapezoid_contains(
-                    &Rect {
-                        x: rect.x + border_w,
-                        y: rect.y + border_w,
-                        width: rect.width.saturating_sub(border_w * 2),
-                        height: rect.height.saturating_sub(border_w * 2),
-                    },
-                    px,
-                    py,
-                )
-            {
+            if !double_trapezoid_contains(rect, px, py) {
+                continue;
+            }
+
+            // Again, see if this pixel is under border_w distance from the edge of the shape.
+            let is_border = px - rect.x < border_w
+                || rect.x + rect.width - px <= border_w
+                || rect.y + rect.height - py <= border_w
+                || (0..=border_w)
+                    .any(|d| !double_trapezoid_contains(rect, px, py.saturating_sub(d)));
+
+            if is_border {
                 let dst = *canvas.get_pixel(px, py);
                 canvas.put_pixel(px, py, blend(dst, colour));
             }
@@ -361,6 +361,11 @@ fn draw_double_trapezoid_border(
 
 fn double_trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
     if rect.width == 0 || rect.height == 0 {
+        return false;
+    }
+
+    // Fast fail if drawing outside rect
+    if px < rect.x || px >= rect.x + rect.width || py < rect.y || py >= rect.y + rect.height {
         return false;
     }
 
