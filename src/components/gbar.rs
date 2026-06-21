@@ -86,7 +86,7 @@ fn draw_triangle_indicator(
         return;
     }
     let inner_border_c: Rgba<u8> = Rgba([128, 128, 128, 255]);
-    let inner_border_w = border_w + 1; // 1px inset from outer border
+    let inner_border_w = border_w + 2; // 2px inset
 
     for row in 0..height {
         let lx = tip_x.saturating_sub(row);
