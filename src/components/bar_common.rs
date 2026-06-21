@@ -198,6 +198,11 @@ fn groove_rect_contains(rect: &Rect, px: u32, py: u32) -> bool {
     let local_x = px.saturating_sub(rect.x) as f32 + 0.5;
     let local_y = py.saturating_sub(rect.y) as f32 + 0.5;
 
+    // Fast fail if we're attempting to render outside the rect
+    if py < rect.y || py >= rect.y + rect.height || px < rect.x || px >= rect.x + rect.width {
+        return false;
+    }
+
     // Fast Pass, if we're not inside the rounded area, we're always good
     if local_x >= radius && local_x <= rect.width as f32 - radius {
         return true;
