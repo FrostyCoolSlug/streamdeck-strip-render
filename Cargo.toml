@@ -7,7 +7,7 @@ edition = "2024"
 strict-rendering = []
 
 [dependencies]
-image = { version = "0.25", default-features = false, features = ["png", "bmp", "tiff"] }
+image = { version = "0.25", default-features = false, features = ["png", "bmp", "jpeg"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_repr = "0.1"
 serde_json = "1.0"
@@ -23,6 +23,8 @@ ab_glyph = "0.2"
 
 # Image Handling
 base64 = "0.22"
+
+# SVG Handling
 resvg = "0.47"
 usvg = "0.47"
 tiny-skia = "0.12"
