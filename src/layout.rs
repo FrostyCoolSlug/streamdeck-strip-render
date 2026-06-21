@@ -501,6 +501,25 @@ pub trait Scale {
     fn scale(&mut self, factor: u32);
 }
 
+impl Scale for Layout {
+    fn scale(&mut self, factor: u32) {
+        for item in &mut self.items {
+            item.scale(factor);
+        }
+    }
+}
+
+impl Scale for LayoutItem {
+    fn scale(&mut self, factor: u32) {
+        match self {
+            LayoutItem::Text(item) => item.scale(factor),
+            LayoutItem::Pixmap(item) => item.scale(factor),
+            LayoutItem::Bar(item) => item.scale(factor),
+            LayoutItem::GBar(item) => item.scale(factor),
+        }
+    }
+}
+
 impl Scale for Rect {
     fn scale(&mut self, factor: u32) {
         self.x *= factor;
@@ -510,9 +529,23 @@ impl Scale for Rect {
     }
 }
 
-impl Scale for BarCommon {
+impl Scale for TextItem {
     fn scale(&mut self, factor: u32) {
-        self.border_w *= factor;
+        self.common.rect.scale(factor);
+        self.font.scale(factor);
+    }
+}
+
+impl Scale for FontConfig {
+    fn scale(&mut self, factor: u32) {
+        self.size *= factor as f32;
+        self.weight *= factor;
+    }
+}
+
+impl Scale for PixmapItem {
+    fn scale(&mut self, factor: u32) {
+        self.common.rect.scale(factor);
     }
 }
 
@@ -529,5 +562,11 @@ impl Scale for GBarItem {
         self.bar_common.scale(factor);
 
         self.bar_h *= factor;
+    }
+}
+
+impl Scale for BarCommon {
+    fn scale(&mut self, factor: u32) {
+        self.border_w *= factor;
     }
 }
