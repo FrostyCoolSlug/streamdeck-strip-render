@@ -1,7 +1,7 @@
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{BarCommon, BarSubtype, CommonFields, Rect};
 use crate::render::{
-    CANVAS_H, CANVAS_W, FillStyle, blend, draw_border, normalise, put_blended, resolve_colour,
+    blend, draw_border, normalise, put_blended, resolve_colour, FillStyle, CANVAS_H, CANVAS_W,
 };
 use image::{Rgba, RgbaImage};
 
@@ -266,18 +266,19 @@ fn draw_trapezoid_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>, 
 
     for py in rect.y..clip_y {
         for px in rect.x..clip_x {
-            if trapezoid_contains(rect, px, py)
-                && !trapezoid_contains(
-                    &Rect {
-                        x: rect.x + border_w,
-                        y: rect.y + border_w,
-                        width: rect.width.saturating_sub(border_w * 2),
-                        height: rect.height.saturating_sub(border_w * 2),
-                    },
-                    px,
-                    py,
-                )
-            {
+            if !trapezoid_contains(rect, px, py) {
+                continue;
+            }
+
+            // Find out if this pixel is under border_w distance from the edge of the trapezoid.
+            let is_border = (0..border_w).any(|d| {
+                px - rect.x < border_w                                          // left
+                    || rect.x + rect.width - px <= border_w                     // right
+                    || rect.y + rect.height - py <= border_w                    // bottom
+                    || !trapezoid_contains(rect, px, py.saturating_sub(d + 1))  // top slope
+            });
+
+            if is_border {
                 let dst = *canvas.get_pixel(px, py);
                 canvas.put_pixel(px, py, blend(dst, colour));
             }
@@ -289,6 +290,12 @@ fn trapezoid_contains(rect: &Rect, px: u32, py: u32) -> bool {
     if rect.width == 0 || rect.height == 0 {
         return false;
     }
+
+    // Fast fail if drawing outside rect
+    if px < rect.x || px >= rect.x + rect.width || py < rect.y || py >= rect.y + rect.height {
+        return false;
+    }
+
     let local_x = px.saturating_sub(rect.x) as f32;
     let local_y = py.saturating_sub(rect.y) as f32;
 
