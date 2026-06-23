@@ -26,9 +26,7 @@ ab_glyph = "0.2"
 base64 = "0.22"
 
 # SVG Handling
-resvg = "0.47"
-usvg = "0.47"
-tiny-skia = "0.12"
+resvg = { version = "0.47", default-features = false, features = ["text", "system-fonts"] }
 
 [dev-dependencies]
 env_logger = "0.11"
