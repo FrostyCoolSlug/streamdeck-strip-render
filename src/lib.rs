@@ -4,6 +4,7 @@ use crate::layout::{Layout, is_svg};
 use crate::render::render_layout;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, DynamicImage, ImageEncoder, RgbaImage};
+use log::warn;
 use serde::Deserialize;
 use serde_json::Value;
 use std::path::Path;
@@ -92,7 +93,17 @@ fn fix_relative_paths(value: &mut Value, base: &Path) {
             && !v.starts_with("data:")
             && !is_svg(v)
         {
-            item["value"] = Value::String(base.join(v).to_string_lossy().into_owned());
+            if let Ok(path) = base.join(v).canonicalize() {
+                if path.starts_with(base) {
+                    item["value"] = Value::String(path.to_string_lossy().into_owned());
+                } else {
+                    warn!("Attempted to load image outside of base path: {:?}", path);
+                    item["value"] = Value::String(String::new());
+                }
+            } else {
+                warn!("Unable to canonicalize path: {:?}", v);
+                item["value"] = Value::String(String::new());
+            }
         }
     }
 }
