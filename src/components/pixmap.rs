@@ -4,6 +4,19 @@ use crate::layout::{PixmapItem, PixmapSource, Rect};
 use crate::render::{FillStyle, blend, fill_rect, is_valid_rect};
 use image::{Rgba, RgbaImage, imageops};
 use log::warn;
+use resvg::usvg::fontdb;
+use std::sync::{Arc, OnceLock};
+
+static FONT_DATABASE: OnceLock<Arc<fontdb::Database>> = OnceLock::new();
+fn font_database() -> Arc<fontdb::Database> {
+    FONT_DATABASE
+        .get_or_init(|| {
+            let mut db = fontdb::Database::new();
+            db.load_system_fonts();
+            Arc::new(db)
+        })
+        .clone()
+}
 
 pub(crate) fn render_pixmap(canvas: &mut RgbaImage, item: &PixmapItem) {
     let rect = &item.common.rect;
@@ -50,7 +63,12 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
             use resvg::tiny_skia;
             use resvg::usvg;
 
-            let tree = usvg::Tree::from_str(svg, &usvg::Options::default()).ok()?;
+            let opt = usvg::Options {
+                fontdb: font_database(),
+                ..Default::default()
+            };
+
+            let tree = usvg::Tree::from_str(svg, &opt).ok()?;
             let mut pixmap = tiny_skia::Pixmap::new(rect.width, rect.height)?;
 
             // We'll render the SVG at the rect size, so we don't need to do additional resizing
