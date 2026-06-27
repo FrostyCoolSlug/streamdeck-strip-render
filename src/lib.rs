@@ -84,6 +84,11 @@ fn render_to_rgba(
 /// Paths are either data:, a raw SVG string, or a path. This function attempts to locate
 /// the paths and fully resolve them.
 fn fix_relative_paths(value: &mut Value, base: &Path) {
+    let Ok(base) = base.canonicalize() else {
+        warn!("Unable to canonicalise base path");
+        return;
+    };
+
     let Some(items) = value["items"].as_array_mut() else {
         return;
     };
@@ -94,7 +99,7 @@ fn fix_relative_paths(value: &mut Value, base: &Path) {
             && !is_svg(v)
         {
             if let Ok(path) = base.join(v).canonicalize() {
-                if path.starts_with(base) {
+                if path.starts_with(&base) {
                     item["value"] = Value::String(path.to_string_lossy().into_owned());
                 } else {
                     warn!("Attempted to load image outside of base path: {:?}", path);
