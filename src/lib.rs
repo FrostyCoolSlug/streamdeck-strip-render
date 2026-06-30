@@ -1,13 +1,11 @@
 use anyhow::Result;
 
-use crate::layout::{Layout, is_svg};
+use crate::layout::Layout;
 use crate::render::render_layout;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, DynamicImage, ImageEncoder, RgbaImage};
-use log::warn;
 use serde::Deserialize;
 use serde_json::Value;
-use std::path::Path;
 
 mod color;
 mod components;
@@ -45,19 +43,14 @@ impl IntoLayoutValue for Value {
 
 pub fn render_to_image(
     source: impl IntoLayoutValue,
-    img_base: &Path,
     bg_image: Option<String>,
 ) -> Result<DynamicImage> {
-    let img = render_to_rgba(source, img_base, bg_image)?;
+    let img = render_to_rgba(source, bg_image)?;
     Ok(DynamicImage::ImageRgba8(img))
 }
 
-pub fn render_to_png(
-    source: impl IntoLayoutValue,
-    img_base: &Path,
-    bg_image: Option<String>,
-) -> Result<Vec<u8>> {
-    let image = render_to_rgba(source, img_base, bg_image)?;
+pub fn render_to_png(source: impl IntoLayoutValue, bg_image: Option<String>) -> Result<Vec<u8>> {
+    let image = render_to_rgba(source, bg_image)?;
 
     let mut bytes = Vec::new();
     PngEncoder::new(&mut bytes).write_image(
@@ -69,48 +62,11 @@ pub fn render_to_png(
     Ok(bytes)
 }
 
-fn render_to_rgba(
-    source: impl IntoLayoutValue,
-    img_base: &Path,
-    bg_image: Option<String>,
-) -> Result<RgbaImage> {
-    let mut value = source.into_layout_value()?;
-    fix_relative_paths(&mut value, img_base);
+fn render_to_rgba(source: impl IntoLayoutValue, bg_image: Option<String>) -> Result<RgbaImage> {
+    let value = source.into_layout_value()?;
 
     let mut layout = Layout::deserialize(value).map_err(anyhow::Error::from)?;
     render_layout(&mut layout, bg_image)
-}
-
-/// Paths are either data:, a raw SVG string, or a path. This function attempts to locate
-/// the paths and fully resolve them.
-fn fix_relative_paths(value: &mut Value, base: &Path) {
-    let Ok(base) = base.canonicalize() else {
-        warn!("Unable to canonicalise base path");
-        return;
-    };
-
-    let Some(items) = value["items"].as_array_mut() else {
-        return;
-    };
-    for item in items {
-        if item["type"] == "pixmap"
-            && let Some(v) = item["value"].as_str()
-            && !v.starts_with("data:")
-            && !is_svg(v)
-        {
-            if let Ok(path) = base.join(v).canonicalize() {
-                if path.starts_with(&base) {
-                    item["value"] = Value::String(path.to_string_lossy().into_owned());
-                } else {
-                    warn!("Attempted to load image outside of base path: {:?}", path);
-                    item["value"] = Value::String(String::new());
-                }
-            } else {
-                warn!("Unable to canonicalize path: {:?}", v);
-                item["value"] = Value::String(String::new());
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -164,12 +120,8 @@ mod tests {
             let json = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
 
-            let img = render_to_png(
-                json,
-                path.parent().expect("Failed to fetch parent path"),
-                None,
-            )
-            .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
+            let img = render_to_png(json, None)
+                .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
 
             let output_file = path
                 .file_stem()
