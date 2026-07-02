@@ -1,15 +1,14 @@
-use crate::STRICT_RENDER;
+use crate::{FONT_SANS, STRICT_RENDER};
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{Rect, TextAlignment, TextItem, TextOverflow};
 use crate::render::{blend, fill_rect, is_valid_rect};
 use ab_glyph::{Font, FontVec, PxScale, PxScaleFont, ScaleFont, VariableFont};
 use image::{Rgba, RgbaImage};
-use log::warn;
+use log::{info, warn};
 use std::sync::{LazyLock, Mutex};
 
 pub(crate) static DEFAULT_FONT: LazyLock<Mutex<FontVec>> = LazyLock::new(|| {
-    static BUNDLED: &[u8] = include_bytes!("../../resources/fonts/InterVariable.ttf");
-    let font = FontVec::try_from_vec(BUNDLED.to_vec()).expect("Bundled font is corrupt");
+    let font = FontVec::try_from_vec(FONT_SANS.to_vec()).expect("Bundled font is corrupt");
     Mutex::new(font)
 });
 
@@ -49,7 +48,10 @@ pub(crate) fn render_text(canvas: &mut RgbaImage, item: &TextItem) {
     // Grab and configure the font for this render
     let mut font = DEFAULT_FONT.lock().unwrap();
     font.set_variation(b"wght", item.font.weight as f32);
-    let scaled = font.as_scaled(PxScale::from(item.font.size));
+
+    // Noto renders a little smaller than Inter and DejaVu, so we'll give it a 20% nudge
+    let font_size = item.font.size * 1.20;
+    let scaled = font.as_scaled(PxScale::from(font_size));
 
     // ascent/descent are now direct methods on the scaled font
     let ascent = scaled.ascent();

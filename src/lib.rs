@@ -12,6 +12,10 @@ mod components;
 mod layout;
 mod render;
 
+pub(crate) static FONT_SANS: &[u8] = include_bytes!("../resources/fonts/noto/NotoSans.ttf");
+pub(crate) static FONT_SERIF: &[u8] = include_bytes!("../resources/fonts/noto/NotoSerif.ttf");
+pub(crate) static FONT_MONO: &[u8] = include_bytes!("../resources/fonts/noto/NotoSansMono.ttf");
+
 #[cfg(feature = "strict-rendering")]
 const STRICT_RENDER: bool = true;
 #[cfg(not(feature = "strict-rendering"))]
