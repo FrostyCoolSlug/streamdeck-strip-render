@@ -99,7 +99,8 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
                 &mut pixmap.as_mut(),
             );
 
-            RgbaImage::from_raw(rect.width, rect.height, pixmap.data().to_vec())
+            let demultiplied = pixmap.take_demultiplied();
+            RgbaImage::from_raw(rect.width, rect.height, demultiplied)
         }
     }
 }
