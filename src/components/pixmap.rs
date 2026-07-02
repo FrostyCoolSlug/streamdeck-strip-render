@@ -1,7 +1,7 @@
-use crate::STRICT_RENDER;
 use crate::color::{parse_gradient, with_opacity};
 use crate::layout::{PixmapItem, PixmapSource, Rect};
 use crate::render::{FillStyle, blend, fill_rect, is_valid_rect};
+use crate::{FONT_MONO, FONT_SANS, FONT_SERIF, STRICT_RENDER};
 use image::{Rgba, RgbaImage, imageops};
 use log::warn;
 use resvg::usvg::fontdb;
@@ -10,12 +10,29 @@ use std::sync::{Arc, OnceLock};
 static FONT_DATABASE: OnceLock<Arc<fontdb::Database>> = OnceLock::new();
 fn font_database() -> Arc<fontdb::Database> {
     FONT_DATABASE
-        .get_or_init(|| {
-            let mut db = fontdb::Database::new();
-            db.load_system_fonts();
-            Arc::new(db)
-        })
+        .get_or_init(|| Arc::new(build_font_database()))
         .clone()
+}
+
+fn build_font_database() -> fontdb::Database {
+    let mut db = fontdb::Database::new();
+    //db.load_system_fonts();
+
+    // We're going to load our embedded fonts and set them as the default font-families. This
+    // guarantees cross-platform consistency, as well as ensures a font is ALWAYS present for
+    // a specific family.
+    db.load_font_data(FONT_SANS.to_vec());
+    db.load_font_data(FONT_SERIF.to_vec());
+    db.load_font_data(FONT_MONO.to_vec());
+
+    db.set_sans_serif_family("Noto Sans");
+    db.set_serif_family("Noto Serif");
+    db.set_monospace_family("Noto Sans Mono");
+
+    db.set_cursive_family("Noto Sans");
+    db.set_fantasy_family("Noto Sans");
+
+    db
 }
 
 pub(crate) fn render_pixmap(canvas: &mut RgbaImage, item: &PixmapItem) {
