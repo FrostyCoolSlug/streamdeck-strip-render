@@ -91,7 +91,7 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
             let root = doc.root_element();
 
             // Parse out the ViewBox coordinates and size
-            let (vb_x, vb_y, vb_w, vb_h) = if let Some(vb_str) = root.attribute("viewBox") {
+            let (_, _, vb_w, vb_h) = if let Some(vb_str) = root.attribute("viewBox") {
                 let coords: Vec<f32> = vb_str
                     .split(|c: char| c.is_whitespace() || c == ',')
                     .filter(|s| !s.is_empty())
@@ -112,10 +112,10 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
             let viewport_h = tree.size().height();
 
             // Reconcile a bad viewBox
-            let (final_x, final_y, final_w, final_h) = if vb_w > 0.0 && vb_h > 0.0 {
-                (vb_x, vb_y, vb_w, vb_h)
+            let (final_w, final_h) = if vb_w > 0.0 && vb_h > 0.0 {
+                (vb_w, vb_h)
             } else {
-                (0.0, 0.0, viewport_w, viewport_h)
+                (viewport_w, viewport_h)
             };
 
             // This will extract the contents of the viewBox
@@ -131,7 +131,6 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
 
             let transform = Transform::from_translate(-resvg_pad_x, -resvg_pad_y)
                 .post_scale(1.0 / content_scale, 1.0 / content_scale)
-                .post_translate(-final_x, -final_y)
                 .post_scale(sx, sy);
 
             let mut pixmap = tiny_skia::Pixmap::new(rect.width, rect.height)?;
