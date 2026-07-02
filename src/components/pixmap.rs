@@ -87,7 +87,7 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
             };
 
             // We need to render the viewBox and not the entire image, so we have to find it.
-            let doc = roxmltree::Document::parse(&svg).unwrap();
+            let doc = roxmltree::Document::parse(svg).unwrap();
             let root = doc.root_element();
 
             // Parse out the ViewBox coordinates and size

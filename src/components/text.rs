@@ -1,10 +1,10 @@
-use crate::{FONT_SANS, STRICT_RENDER};
 use crate::color::{parse_color, parse_gradient, with_opacity};
 use crate::layout::{Rect, TextAlignment, TextItem, TextOverflow};
 use crate::render::{blend, fill_rect, is_valid_rect};
+use crate::{FONT_SANS, STRICT_RENDER};
 use ab_glyph::{Font, FontVec, PxScale, PxScaleFont, ScaleFont, VariableFont};
 use image::{Rgba, RgbaImage};
-use log::{info, warn};
+use log::warn;
 use std::sync::{LazyLock, Mutex};
 
 pub(crate) static DEFAULT_FONT: LazyLock<Mutex<FontVec>> = LazyLock::new(|| {

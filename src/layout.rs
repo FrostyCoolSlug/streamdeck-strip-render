@@ -139,7 +139,7 @@ pub struct TextItem {
 
 impl TextItem {
     pub fn value(&self) -> String {
-        self.value.clone().unwrap_or_else(|| String::new())
+        self.value.clone().unwrap_or_else(String::new)
     }
 }
 
