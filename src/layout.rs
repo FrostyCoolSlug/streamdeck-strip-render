@@ -139,10 +139,7 @@ pub struct TextItem {
 
 impl TextItem {
     pub fn value(&self) -> String {
-        // TODO: Values are optional, if we don't have one, just render the key, this might not be correct
-        self.value
-            .clone()
-            .unwrap_or_else(|| format!("{{{{{}}}}}", self.common.key))
+        self.value.clone().unwrap_or_else(|| String::new())
     }
 }
 
