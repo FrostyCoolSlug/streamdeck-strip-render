@@ -4,7 +4,8 @@ use crate::render::{FillStyle, blend, fill_rect, is_valid_rect};
 use crate::{FONT_MONO, FONT_SANS, FONT_SERIF, STRICT_RENDER};
 use image::{Rgba, RgbaImage, imageops};
 use log::warn;
-use resvg::usvg::fontdb;
+use resvg::tiny_skia::Transform;
+use resvg::usvg::{fontdb, roxmltree};
 use std::sync::{Arc, OnceLock};
 
 static FONT_DATABASE: OnceLock<Arc<fontdb::Database>> = OnceLock::new();
@@ -85,19 +86,56 @@ fn load_pixmap_source(source: &PixmapSource, rect: &Rect) -> Option<RgbaImage> {
                 ..Default::default()
             };
 
-            let tree = usvg::Tree::from_str(svg, &opt).ok()?;
-            let mut pixmap = tiny_skia::Pixmap::new(rect.width, rect.height)?;
+            // We need to render the viewBox and not the entire image, so we have to find it.
+            let doc = roxmltree::Document::parse(&svg).unwrap();
+            let root = doc.root_element();
 
-            // We'll render the SVG at the rect size, so we don't need to do additional resizing
+            // Parse out the ViewBox coordinates and size
+            let (vb_x, vb_y, vb_w, vb_h) = if let Some(vb_str) = root.attribute("viewBox") {
+                let coords: Vec<f32> = vb_str
+                    .split(|c: char| c.is_whitespace() || c == ',')
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.parse::<f32>().unwrap_or(0.0))
+                    .collect();
+
+                if coords.len() == 4 {
+                    (coords[0], coords[1], coords[2], coords[3])
+                } else {
+                    (0.0, 0.0, 0.0, 0.0)
+                }
+            } else {
+                (0.0, 0.0, 0.0, 0.0)
+            };
+
+            let tree = usvg::Tree::from_str(svg, &opt).ok()?;
+            let viewport_w = tree.size().width();
+            let viewport_h = tree.size().height();
+
+            // Reconcile a bad viewBox
+            let (final_x, final_y, final_w, final_h) = if vb_w > 0.0 && vb_h > 0.0 {
+                (vb_x, vb_y, vb_w, vb_h)
+            } else {
+                (0.0, 0.0, viewport_w, viewport_h)
+            };
+
+            // This will extract the contents of the viewBox
+            let content_scale = (viewport_w / final_w).min(viewport_h / final_h);
+            let resvg_pad_x = (viewport_w - (final_w * content_scale)) / 2.0;
+            let resvg_pad_y = (viewport_h - (final_h * content_scale)) / 2.0;
+
+            // This will scale the image to the rect size
             // TODO: Do we need to scale to rect, or only reduce to rect?
             // TODO: Should we maintain aspect ratio?
-            let sx = rect.width as f32 / tree.size().width();
-            let sy = rect.height as f32 / tree.size().height();
-            resvg::render(
-                &tree,
-                usvg::Transform::from_scale(sx, sy),
-                &mut pixmap.as_mut(),
-            );
+            let sx = rect.width as f32 / final_w;
+            let sy = rect.height as f32 / final_h;
+
+            let transform = Transform::from_translate(-resvg_pad_x, -resvg_pad_y)
+                .post_scale(1.0 / content_scale, 1.0 / content_scale)
+                .post_translate(-final_x, -final_y)
+                .post_scale(sx, sy);
+
+            let mut pixmap = tiny_skia::Pixmap::new(rect.width, rect.height)?;
+            resvg::render(&tree, transform, &mut pixmap.as_mut());
 
             let demultiplied = pixmap.take_demultiplied();
             RgbaImage::from_raw(rect.width, rect.height, demultiplied)
