@@ -161,7 +161,7 @@ impl TextItem {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum TextAlignment {
     Left,
@@ -207,7 +207,7 @@ impl From<&String> for TextOverflow {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FontConfig {
     /// Size of the font, in pixels, represented as a whole number
     /// The examples use 16
@@ -256,7 +256,7 @@ fn default_pixmap_source() -> PixmapSource {
     PixmapSource::None
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub enum PixmapSource {
     File(String),
     Bytes(Vec<u8>),
@@ -544,7 +544,7 @@ impl<'de> Deserialize<'de> for Rect {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Range {
     pub min: f64,
     pub max: f64,
