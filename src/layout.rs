@@ -17,6 +17,10 @@ pub struct Layout {
 }
 
 impl Layout {
+    pub fn item(&self, key: &str) -> Option<&LayoutItem> {
+        self.items.iter().find(|item| item.key() == key)
+    }
+
     pub fn item_mut(&mut self, key: &str) -> Option<&mut LayoutItem> {
         self.items.iter_mut().find(|item| item.key() == key)
     }

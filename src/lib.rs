@@ -2,15 +2,15 @@ use anyhow::Result;
 
 use crate::layout::Layout;
 use crate::render::render_layout;
+use crate::strip_renderer::StripRenderer;
 use image::codecs::png::PngEncoder;
 use image::{ColorType, DynamicImage, ImageEncoder, RgbaImage};
 use serde::Deserialize;
 use serde_json::Value;
-use crate::strip_renderer::StripRenderer;
 
 mod color;
 mod components;
-mod layout;
+pub mod layout;
 mod render;
 pub mod strip_renderer;
 
@@ -47,10 +47,13 @@ impl IntoLayoutValue for Value {
     }
 }
 
-pub fn get_incremental_renderer(source: impl IntoLayoutValue, _bg_image: Option<String>) -> Result<StripRenderer> {
+pub fn get_incremental_renderer(
+    source: impl IntoLayoutValue,
+    _bg_image: Option<String>,
+) -> Result<StripRenderer> {
     let value = source.into_layout_value()?;
     let layout = Layout::deserialize(value).map_err(anyhow::Error::from)?;
-    
+
     StripRenderer::from(layout)
 }
 

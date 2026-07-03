@@ -1,6 +1,5 @@
 use crate::layout::{
-    BarCommon, CommonFields, Layout, LayoutItem, PixmapItem, Range, Rect,
-    TextItem, parse_pixmap,
+    BarCommon, CommonFields, Layout, LayoutItem, PixmapItem, Range, Rect, TextItem, parse_pixmap,
 };
 
 use anyhow::Result;
@@ -9,13 +8,14 @@ use crate::components::bar::render_bar;
 use crate::components::gbar::render_gbar;
 use crate::components::pixmap::render_pixmap;
 use crate::components::text::render_text;
-use crate::render::{CANVAS_H, CANVAS_W, blend, validate_layout};
+use crate::render::{CANVAS_H, CANVAS_W, validate_layout};
 use image::{Rgba, RgbaImage};
 use log::trace;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 
+#[derive(Debug, Clone)]
 pub struct StripRenderer {
     layout: Layout,
     layers: HashMap<u32, RgbaImage>,
@@ -85,6 +85,10 @@ impl StripRenderer {
         }
     }
 
+    pub fn layout(&mut self) -> &Layout {
+        &self.layout
+    }
+
     pub fn get_image(&mut self) -> RgbaImage {
         if let Some(latest) = &self.latest_image {
             return latest.clone();
@@ -92,30 +96,14 @@ impl StripRenderer {
 
         // Create the new Image, and grab it's raw buffer
         let mut image = RgbaImage::new(CANVAS_W, CANVAS_H);
-        let buffer = image.as_mut();
 
         // Get all the layers sorted by z-order
         let mut entries: Vec<_> = self.layers.iter().collect();
         entries.sort_unstable_by_key(|(k, _)| *k);
 
-        // Get the raw buffers of each layer
-        let layer_buffers: Vec<&[u8]> = entries
-            .iter()
-            .map(|(_, img)| img.as_raw().as_slice())
-            .collect();
-
-        // Iterate the pixels, and blend them together
-        let pixel_count = (CANVAS_W * CANVAS_H) as usize;
-        for i in 0..pixel_count {
-            let base = i * 4;
-
-            let mut pixel = Rgba([0, 0, 0, 0]);
-            for buf in &layer_buffers {
-                let src = Rgba([buf[base], buf[base + 1], buf[base + 2], buf[base + 3]]);
-                pixel = blend(pixel, src);
-            }
-
-            buffer[base..base + 4].copy_from_slice(&pixel.0);
+        // Overlay layers in order
+        for (_, layer) in entries {
+            image::imageops::overlay(&mut image, layer, 0, 0);
         }
 
         self.latest_image = Some(image.clone());
@@ -248,26 +236,29 @@ impl StripRenderer {
             match key.as_str() {
                 "bar_bg_c" => {
                     if let Value::String(s) = value
-                        && &bar.bar_bg_c != s {
-                            bar.bar_bg_c = s.clone();
-                            changed = true;
-                        }
+                        && &bar.bar_bg_c != s
+                    {
+                        bar.bar_bg_c = s.clone();
+                        changed = true;
+                    }
                 }
 
                 "bar_border_c" => {
                     if let Value::String(s) = value
-                        && &bar.bar_border_c != s {
-                            bar.bar_border_c = s.clone();
-                            changed = true;
-                        }
+                        && &bar.bar_border_c != s
+                    {
+                        bar.bar_border_c = s.clone();
+                        changed = true;
+                    }
                 }
 
                 "bar_fill_c" => {
                     if let Value::String(s) = value
-                        && &bar.bar_fill_c != s {
-                            bar.bar_fill_c = s.clone();
-                            changed = true;
-                        }
+                        && &bar.bar_fill_c != s
+                    {
+                        bar.bar_fill_c = s.clone();
+                        changed = true;
+                    }
                 }
 
                 "border_w" => {
@@ -282,10 +273,11 @@ impl StripRenderer {
 
                 "range" => {
                     if let Ok(range) = Range::deserialize(value)
-                        && bar.range != range {
-                            bar.range = range;
-                            changed = true;
-                        }
+                        && bar.range != range
+                    {
+                        bar.range = range;
+                        changed = true;
+                    }
                 }
 
                 "subtype" => {
@@ -298,10 +290,9 @@ impl StripRenderer {
                     }
                 }
 
-                "value"
-                    if Self::apply_bar_value(bar, value) => {
-                        changed = true;
-                    }
+                "value" if Self::apply_bar_value(bar, value) => {
+                    changed = true;
+                }
 
                 _ => {}
             }
@@ -373,16 +364,16 @@ impl StripRenderer {
 
                 "color" => {
                     if let Value::String(s) = value
-                        && &t.color != s {
-                            t.color = s.clone();
-                            changed = true;
-                        }
-                }
-
-                "value"
-                    if Self::apply_text_scalar(t, value) => {
+                        && &t.color != s
+                    {
+                        t.color = s.clone();
                         changed = true;
                     }
+                }
+
+                "value" if Self::apply_text_scalar(t, value) => {
+                    changed = true;
+                }
 
                 "font" => {
                     if let Value::Object(font_map) = value {
@@ -390,10 +381,11 @@ impl StripRenderer {
                             match k.as_str() {
                                 "size" => {
                                     if let Some(size) = v.as_f64()
-                                        && t.font.size != size {
-                                            t.font.size = size;
-                                            changed = true;
-                                        }
+                                        && t.font.size != size
+                                    {
+                                        t.font.size = size;
+                                        changed = true;
+                                    }
                                 }
 
                                 "weight" => {
