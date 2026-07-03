@@ -11,6 +11,7 @@ mod color;
 mod components;
 mod layout;
 mod render;
+pub mod render_handler;
 
 pub(crate) static FONT_SANS: &[u8] = include_bytes!("../resources/fonts/noto/NotoSans.ttf");
 pub(crate) static FONT_SERIF: &[u8] = include_bytes!("../resources/fonts/noto/NotoSerif.ttf");
