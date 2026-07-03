@@ -124,7 +124,7 @@ fn post_process(canvas: RgbaImage) -> Result<RgbaImage> {
     Ok(out)
 }
 
-pub fn validate_layout(layout: &mut Layout) -> Result<()> {
+pub fn validate_layout(layout: &Layout) -> Result<()> {
     use std::collections::HashMap;
 
     fn rects_overlap(a: &Rect, b: &Rect) -> bool {
