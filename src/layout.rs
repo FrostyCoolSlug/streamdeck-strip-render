@@ -383,13 +383,18 @@ where
             write!(f, "a float or string representing a float")
         }
 
+        fn visit_i64<E>(self, v: i64) -> Result<f64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v as f64)
+        }
         fn visit_u64<E>(self, v: u64) -> Result<f64, E>
         where
             E: serde::de::Error,
         {
             Ok(v as f64)
         }
-
         fn visit_f64<E>(self, v: f64) -> Result<f64, E>
         where
             E: serde::de::Error,
