@@ -162,7 +162,7 @@ fn resize_to_rect(img: RgbaImage, rect: &Rect) -> RgbaImage {
 }
 
 /// This blits the loaded image onto our canvas, applying opacity as it goes
-fn blit_image(canvas: &mut RgbaImage, src: &RgbaImage, rect: &Rect, opacity: f32) {
+fn blit_image(canvas: &mut RgbaImage, src: &RgbaImage, rect: &Rect, opacity: f64) {
     debug_assert_eq!(
         src.dimensions(),
         (rect.width, rect.height),
@@ -179,7 +179,7 @@ fn blit_image(canvas: &mut RgbaImage, src: &RgbaImage, rect: &Rect, opacity: f32
             }
 
             let mut p = *src.get_pixel(px, py);
-            p[3] = (p[3] as f32 * opacity) as u8;
+            p[3] = (p[3] as f64 * opacity) as u8;
             let dst = *canvas.get_pixel(cx, cy);
             canvas.put_pixel(cx, cy, blend(dst, p));
         }
@@ -189,7 +189,7 @@ fn blit_image(canvas: &mut RgbaImage, src: &RgbaImage, rect: &Rect, opacity: f32
 /// This is essentially a fallback, if an image is not defined, or we can't load the image
 /// we replace it with a checkerboard in the location the image should be.
 /// TODO: We should probably not draw at all, but this helps debugging
-fn draw_checkerboard(canvas: &mut RgbaImage, rect: &Rect, opacity: f32) {
+fn draw_checkerboard(canvas: &mut RgbaImage, rect: &Rect, opacity: f64) {
     let c1 = with_opacity(Rgba([80, 80, 80, 128]), opacity);
     let c2 = with_opacity(Rgba([48, 48, 48, 128]), opacity);
     let tile = 8u32;

@@ -50,7 +50,7 @@ pub(crate) fn render_text(canvas: &mut RgbaImage, item: &TextItem) {
     font.set_variation(b"wght", item.font.weight as f32);
 
     // Noto renders a little smaller than Inter and DejaVu, so we'll give it a 20% nudge
-    let font_size = item.font.size * 1.20;
+    let font_size = (item.font.size * 1.20) as f32;
     let scaled = font.as_scaled(PxScale::from(font_size));
 
     // ascent/descent are now direct methods on the scaled font

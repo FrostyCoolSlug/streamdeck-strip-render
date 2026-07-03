@@ -15,6 +15,13 @@ pub struct Layout {
     pub id: String,
     pub items: Vec<LayoutItem>,
 }
+
+impl Layout {
+    pub fn item_mut(&mut self, key: &str) -> Option<&mut LayoutItem> {
+        self.items.iter_mut().find(|item| item.key() == key)
+    }
+}
+
 fn default_schema() -> String {
     "https://schemas.elgato.com/streamdeck/plugins/layout.json".to_string()
 }
@@ -32,28 +39,31 @@ pub enum LayoutItem {
 }
 
 impl LayoutItem {
-    pub fn z_order(&self) -> u32 {
-        match self {
-            LayoutItem::Text(i) => i.common.z_order,
-            LayoutItem::Pixmap(i) => i.common.z_order,
-            LayoutItem::Bar(i) => i.common.z_order,
-            LayoutItem::GBar(i) => i.common.z_order,
-        }
+    pub fn key(&self) -> &str {
+        &self.common().key
     }
-    pub fn enabled(&self) -> bool {
-        match self {
-            LayoutItem::Text(i) => i.common.enabled,
-            LayoutItem::Pixmap(i) => i.common.enabled,
-            LayoutItem::Bar(i) => i.common.enabled,
-            LayoutItem::GBar(i) => i.common.enabled,
-        }
-    }
+
     pub fn common(&self) -> &CommonFields {
         match self {
             LayoutItem::Text(text) => &text.common,
             LayoutItem::Pixmap(pixmap) => &pixmap.common,
             LayoutItem::Bar(bar) => &bar.common,
             LayoutItem::GBar(gbar) => &gbar.common,
+        }
+    }
+
+    pub fn z_order(&self) -> u32 {
+        self.common().z_order
+    }
+    pub fn enabled(&self) -> bool {
+        self.common().enabled
+    }
+
+    pub fn bar_common_mut(&mut self) -> Option<&mut BarCommon> {
+        match self {
+            LayoutItem::Bar(bar) => Some(&mut bar.bar_common),
+            LayoutItem::GBar(gbar) => Some(&mut gbar.bar_common),
+            _ => None,
         }
     }
 }
@@ -84,7 +94,7 @@ pub struct CommonFields {
 
     /// Opacity 0.0–1.0 (schema allows only 1-decimal steps). Default 1.
     #[serde(default = "default_opacity")]
-    pub opacity: f32,
+    pub opacity: f64,
 
     /// Background colour represented as a named colour, hexadecimal value, or gradient.
     /// Default: black
@@ -100,7 +110,7 @@ fn default_enabled() -> bool {
     true
 }
 
-fn default_opacity() -> f32 {
+fn default_opacity() -> f64 {
     1.0
 }
 
@@ -129,7 +139,7 @@ pub struct TextItem {
 
     /// Text to be displayed
     #[serde(default)]
-    value: Option<String>,
+    pub value: Option<String>,
 
     /// WARNING: Per the docs, If key == "title", this should be set based on the prop inspector.
     /// This code doesn't care, it's upstreams responsibility to set this correctly.
@@ -159,6 +169,17 @@ pub enum TextAlignment {
     Right,
 }
 
+impl From<&String> for TextAlignment {
+    fn from(s: &String) -> Self {
+        match s.as_str() {
+            "left" => TextAlignment::Left,
+            "center" => TextAlignment::Center,
+            "right" => TextAlignment::Right,
+            _ => TextAlignment::Center,
+        }
+    }
+}
+
 fn default_alignment() -> TextAlignment {
     TextAlignment::Center
 }
@@ -175,13 +196,24 @@ pub enum TextOverflow {
     Fade,
 }
 
+impl From<&String> for TextOverflow {
+    fn from(s: &String) -> Self {
+        match s.as_str() {
+            "clip" => TextOverflow::Clip,
+            "ellipsis" => TextOverflow::Ellipsis,
+            "fade" => TextOverflow::Fade,
+            _ => TextOverflow::Clip,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FontConfig {
     /// Size of the font, in pixels, represented as a whole number
     /// The examples use 16
     /// Default: This isn't declared in the docs, so will need review
     #[serde(default = "default_font_size")]
-    pub size: f32,
+    pub size: f64,
     /// Weight of the font; value must be a whole `number` in the range of `100..1000`
     /// The examples use 600
     /// Default: This isn't declared in the docs, so will need review
@@ -198,7 +230,7 @@ impl Default for FontConfig {
     }
 }
 
-fn default_font_size() -> f32 {
+fn default_font_size() -> f64 {
     16.0
 }
 fn default_font_weight() -> u32 {
@@ -242,7 +274,7 @@ impl<'de> Deserialize<'de> for PixmapSource {
     }
 }
 
-fn parse_pixmap(input: &str) -> PixmapSource {
+pub(crate) fn parse_pixmap(input: &str) -> PixmapSource {
     let s = input.trim();
 
     if s.is_empty() {
@@ -333,49 +365,49 @@ pub struct BarCommon {
 
     /// Fill value; correlates with `range`.
     /// This has no default and should ALWAYS be defined.
-    #[serde(deserialize_with = "deserialize_f32_string_or_number")]
-    pub value: f32,
+    #[serde(deserialize_with = "deserialize_f64_string_or_number")]
+    pub value: f64,
 }
 
-// This will turn a Number or String into an f32
-fn deserialize_f32_string_or_number<'de, D>(deserializer: D) -> Result<f32, D::Error>
+// This will turn a Number or String into an f64
+fn deserialize_f64_string_or_number<'de, D>(deserializer: D) -> Result<f64, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    struct F32Visitor;
+    struct F64Visitor;
 
-    impl<'de> serde::de::Visitor<'de> for F32Visitor {
-        type Value = f32;
+    impl<'de> serde::de::Visitor<'de> for F64Visitor {
+        type Value = f64;
 
         fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(f, "a float or string representing a float")
         }
 
-        fn visit_u64<E>(self, v: u64) -> Result<f32, E>
+        fn visit_u64<E>(self, v: u64) -> Result<f64, E>
         where
             E: serde::de::Error,
         {
-            Ok(v as f32)
+            Ok(v as f64)
         }
 
-        fn visit_f64<E>(self, v: f64) -> Result<f32, E>
+        fn visit_f64<E>(self, v: f64) -> Result<f64, E>
         where
             E: serde::de::Error,
         {
-            Ok(v as f32)
+            Ok(v as f64)
         }
 
-        fn visit_str<E>(self, v: &str) -> Result<f32, E>
+        fn visit_str<E>(self, v: &str) -> Result<f64, E>
         where
             E: serde::de::Error,
         {
             v.trim()
-                .parse::<f32>()
+                .parse::<f64>()
                 .map_err(|_| E::custom("invalid float string"))
         }
     }
 
-    deserializer.deserialize_any(F32Visitor)
+    deserializer.deserialize_any(F64Visitor)
 }
 
 /// Bar item Handler
@@ -441,6 +473,19 @@ pub enum BarSubtype {
     Groove = 4,
 }
 
+impl From<u32> for BarSubtype {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => BarSubtype::Rectangle,
+            1 => BarSubtype::DoubleRectangle,
+            2 => BarSubtype::Trapezoid,
+            3 => BarSubtype::DoubleTrapezoid,
+            4 => BarSubtype::Groove,
+            _ => default_subtype(),
+        }
+    }
+}
+
 /// The position and size of a layout item on the 200×100 canvas. Deserializes from the JSON
 /// array form `[x, y, width, height]`. We are making the active assumption that the values are
 /// integers and will never be negative, because per the schema, it doesn't make sense otherwise.
@@ -496,8 +541,8 @@ impl<'de> Deserialize<'de> for Rect {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Range {
-    pub min: f32,
-    pub max: f32,
+    pub min: f64,
+    pub max: f64,
 }
 
 // This might be useful in the future if an attempt at supersampling ever comes along
@@ -543,7 +588,7 @@ impl Scale for TextItem {
 
 impl Scale for FontConfig {
     fn scale(&mut self, factor: u32) {
-        self.size *= factor as f32;
+        self.size *= factor as f64;
         self.weight *= factor;
     }
 }

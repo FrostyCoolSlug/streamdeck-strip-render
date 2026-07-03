@@ -258,7 +258,7 @@ pub(crate) fn draw_border(canvas: &mut RgbaImage, rect: &Rect, colour: Rgba<u8>,
 /// Defines how to fill an area
 pub(crate) struct FillStyle<'a> {
     pub(crate) gradient: &'a Gradient,
-    pub(crate) opacity: f32,
+    pub(crate) opacity: f64,
 }
 
 /// Resolves the colour of the current gradient position
@@ -270,7 +270,7 @@ pub(crate) fn resolve_colour(
     solid: Option<Rgba<u8>>,
 ) -> Rgba<u8> {
     solid.unwrap_or_else(|| {
-        let gradient_pos = px.saturating_sub(rect.x) as f32 / rect.width as f32;
+        let gradient_pos = px.saturating_sub(rect.x) as f64 / rect.width as f64;
         with_opacity(sample_gradient(style.gradient, gradient_pos), style.opacity)
     })
 }
@@ -325,6 +325,6 @@ pub(crate) fn put_blended(canvas: &mut RgbaImage, px: u32, py: u32, colour: Rgba
 }
 
 // Normalise a value between two points
-pub(crate) fn normalise(value: f32, range: &Range) -> f32 {
+pub(crate) fn normalise(value: f64, range: &Range) -> f64 {
     ((value - range.min) / (range.max - range.min)).clamp(0.0, 1.0)
 }

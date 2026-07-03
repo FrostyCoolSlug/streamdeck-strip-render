@@ -7,7 +7,7 @@ use image::Rgba;
 #[derive(Debug, Clone)]
 pub struct GradientStop {
     /// Position along the gradient axis, 0.0–1.0.
-    pub offset: f32,
+    pub offset: f64,
     pub color: Rgba<u8>,
 }
 
@@ -25,7 +25,7 @@ pub fn parse_gradient(s: &str) -> Vec<GradientStop> {
             .filter_map(|segment| {
                 let segment = segment.trim();
                 let colon = segment.find(':')?;
-                let offset: f32 = segment[..colon].trim().parse().ok()?;
+                let offset: f64 = segment[..colon].trim().parse().ok()?;
                 let color = parse_color(segment[colon + 1..].trim());
                 Some(GradientStop { offset, color })
             })
@@ -44,7 +44,7 @@ pub fn parse_gradient(s: &str) -> Vec<GradientStop> {
 }
 
 /// Sample a gradient at position `t` (0.0–1.0), linearly interpolating between stops.
-pub fn sample_gradient(stops: &Vec<GradientStop>, t: f32) -> Rgba<u8> {
+pub fn sample_gradient(stops: &Vec<GradientStop>, t: f64) -> Rgba<u8> {
     match stops.as_slice() {
         [] => Rgba([255, 255, 255, 255]),
         [only] => only.color,
@@ -102,12 +102,12 @@ pub fn parse_color(s: &str) -> Rgba<u8> {
 }
 
 /// Apply opacity (0.0–1.0) to a color's alpha channel.
-pub fn with_opacity(c: Rgba<u8>, opacity: f32) -> Rgba<u8> {
+pub fn with_opacity(c: Rgba<u8>, opacity: f64) -> Rgba<u8> {
     Rgba([
         c[0],
         c[1],
         c[2],
-        (c[3] as f32 * opacity.clamp(0.0, 1.0)).round() as u8,
+        (c[3] as f64 * opacity.clamp(0.0, 1.0)).round() as u8,
     ])
 }
 
@@ -121,8 +121,8 @@ fn looks_like_gradient(s: &str) -> bool {
     })
 }
 
-fn lerp_color(a: Rgba<u8>, b: Rgba<u8>, t: f32) -> Rgba<u8> {
-    let lerp = |x: u8, y: u8| (x as f32 + (y as f32 - x as f32) * t).round() as u8;
+fn lerp_color(a: Rgba<u8>, b: Rgba<u8>, t: f64) -> Rgba<u8> {
+    let lerp = |x: u8, y: u8| (x as f64 + (y as f64 - x as f64) * t).round() as u8;
     Rgba([
         lerp(a[0], b[0]),
         lerp(a[1], b[1]),

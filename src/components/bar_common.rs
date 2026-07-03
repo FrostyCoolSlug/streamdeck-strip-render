@@ -57,7 +57,7 @@ pub(crate) fn draw_bar_shape(
 
     // If we have a value > 0 (or we're a double), draw the fill
     if fraction > 0.0 || is_double {
-        let fill_w = (rect.width as f32 * fraction) as u32;
+        let fill_w = (rect.width as f64 * fraction) as u32;
         draw_fn(canvas, &rect, &fill, fill_w);
     }
 

@@ -50,7 +50,7 @@ pub(crate) fn render_gbar(canvas: &mut RgbaImage, item: &GBarItem) {
 
     // Work with best possible position (if we don't fit, move)
     let indicator_y = target_tip_y.min(max_tip_y);
-    let tip_x = rect.x + (rect.width as f32 * fraction) as u32;
+    let tip_x = rect.x + (rect.width as f64 * fraction) as u32;
 
     // We need the background stops so we can colour the triangle
     let bg_stops = parse_gradient(&item.bar_common.bar_bg_c);
