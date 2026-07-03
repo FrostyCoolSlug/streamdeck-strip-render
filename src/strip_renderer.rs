@@ -95,7 +95,8 @@ impl StripRenderer {
         }
 
         // Create the new Image, and grab it's raw buffer
-        let mut image = RgbaImage::new(CANVAS_W, CANVAS_H);
+        //let mut image = RgbaImage::new(CANVAS_W, CANVAS_H);
+        let mut image = RgbaImage::from_pixel(CANVAS_W, CANVAS_H, Rgba([0, 0, 0, 255]));
 
         // Get all the layers sorted by z-order
         let mut entries: Vec<_> = self.layers.iter().collect();
