@@ -399,7 +399,7 @@ where
         where
             E: serde::de::Error,
         {
-            Ok(v as f64)
+            Ok(v)
         }
 
         fn visit_str<E>(self, v: &str) -> Result<f64, E>

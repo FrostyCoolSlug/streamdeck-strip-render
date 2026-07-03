@@ -1,5 +1,5 @@
 use crate::layout::{
-    BarCommon, CommonFields, FontConfig, Layout, LayoutItem, PixmapItem, PixmapSource, Range, Rect,
+    BarCommon, CommonFields, Layout, LayoutItem, PixmapItem, Range, Rect,
     TextItem, parse_pixmap,
 };
 
@@ -16,14 +16,14 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 
-pub struct RenderHandler {
+pub struct StripRenderer {
     layout: Layout,
     layers: HashMap<u32, RgbaImage>,
 
     latest_image: Option<RgbaImage>,
 }
 
-impl RenderHandler {
+impl StripRenderer {
     pub fn from(layout: Layout) -> Result<Self> {
         validate_layout(&layout)?;
 
@@ -247,30 +247,27 @@ impl RenderHandler {
         for (key, value) in map {
             match key.as_str() {
                 "bar_bg_c" => {
-                    if let Value::String(s) = value {
-                        if &bar.bar_bg_c != s {
+                    if let Value::String(s) = value
+                        && &bar.bar_bg_c != s {
                             bar.bar_bg_c = s.clone();
                             changed = true;
                         }
-                    }
                 }
 
                 "bar_border_c" => {
-                    if let Value::String(s) = value {
-                        if &bar.bar_border_c != s {
+                    if let Value::String(s) = value
+                        && &bar.bar_border_c != s {
                             bar.bar_border_c = s.clone();
                             changed = true;
                         }
-                    }
                 }
 
                 "bar_fill_c" => {
-                    if let Value::String(s) = value {
-                        if &bar.bar_fill_c != s {
+                    if let Value::String(s) = value
+                        && &bar.bar_fill_c != s {
                             bar.bar_fill_c = s.clone();
                             changed = true;
                         }
-                    }
                 }
 
                 "border_w" => {
@@ -284,12 +281,11 @@ impl RenderHandler {
                 }
 
                 "range" => {
-                    if let Ok(range) = Range::deserialize(value) {
-                        if bar.range != range {
+                    if let Ok(range) = Range::deserialize(value)
+                        && bar.range != range {
                             bar.range = range;
                             changed = true;
                         }
-                    }
                 }
 
                 "subtype" => {
@@ -302,11 +298,10 @@ impl RenderHandler {
                     }
                 }
 
-                "value" => {
-                    if Self::apply_bar_value(bar, value) {
+                "value"
+                    if Self::apply_bar_value(bar, value) => {
                         changed = true;
                     }
-                }
 
                 _ => {}
             }
@@ -377,31 +372,28 @@ impl RenderHandler {
                 }
 
                 "color" => {
-                    if let Value::String(s) = value {
-                        if &t.color != s {
+                    if let Value::String(s) = value
+                        && &t.color != s {
                             t.color = s.clone();
                             changed = true;
                         }
-                    }
                 }
 
-                "value" => {
-                    if Self::apply_text_scalar(t, value) {
+                "value"
+                    if Self::apply_text_scalar(t, value) => {
                         changed = true;
                     }
-                }
 
                 "font" => {
                     if let Value::Object(font_map) = value {
                         for (k, v) in font_map {
                             match k.as_str() {
                                 "size" => {
-                                    if let Some(size) = v.as_f64() {
-                                        if t.font.size != size {
+                                    if let Some(size) = v.as_f64()
+                                        && t.font.size != size {
                                             t.font.size = size;
                                             changed = true;
                                         }
-                                    }
                                 }
 
                                 "weight" => {

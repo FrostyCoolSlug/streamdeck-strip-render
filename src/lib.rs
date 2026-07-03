@@ -6,12 +6,13 @@ use image::codecs::png::PngEncoder;
 use image::{ColorType, DynamicImage, ImageEncoder, RgbaImage};
 use serde::Deserialize;
 use serde_json::Value;
+use crate::strip_renderer::StripRenderer;
 
 mod color;
 mod components;
 mod layout;
 mod render;
-pub mod render_handler;
+pub mod strip_renderer;
 
 pub(crate) static FONT_SANS: &[u8] = include_bytes!("../resources/fonts/noto/NotoSans.ttf");
 pub(crate) static FONT_SERIF: &[u8] = include_bytes!("../resources/fonts/noto/NotoSerif.ttf");
@@ -44,6 +45,13 @@ impl IntoLayoutValue for Value {
     fn into_layout_value(self) -> Result<Value> {
         Ok(self)
     }
+}
+
+pub fn get_incremental_renderer(source: impl IntoLayoutValue, _bg_image: Option<String>) -> Result<StripRenderer> {
+    let value = source.into_layout_value()?;
+    let layout = Layout::deserialize(value).map_err(anyhow::Error::from)?;
+    
+    StripRenderer::from(layout)
 }
 
 pub fn render_to_image(
