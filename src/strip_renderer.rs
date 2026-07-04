@@ -255,8 +255,13 @@ impl StripRenderer {
                 continue;
             }
 
-            // Only redraw a title change if we're not overriding it
-            if key != "title" || self.title_override.is_none() {
+            // Only redraw a title / icon change if we're not overriding it
+            let should_redraw = match key.as_str() {
+                "title" => self.title_override.is_none(),
+                "icon" => self.icon_override.is_none(),
+                _ => true,
+            };
+            if should_redraw {
                 changed_keys.push(key.clone());
                 Self::redraw_item(&mut self.layers, &*item);
             }
