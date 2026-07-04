@@ -20,6 +20,9 @@ pub struct StripRenderer {
     layout: Layout,
     layers: HashMap<u32, RgbaImage>,
 
+    title_override: Option<LayoutItem>,
+    _icon_override: Option<String>,
+
     latest_image: Option<RgbaImage>,
 }
 
@@ -30,6 +33,9 @@ impl StripRenderer {
         let mut instance = Self {
             layout,
             layers: HashMap::new(),
+
+            title_override: None,
+            _icon_override: None,
 
             latest_image: None,
         };
@@ -87,6 +93,32 @@ impl StripRenderer {
 
     pub fn layout(&mut self) -> &Layout {
         &self.layout
+    }
+
+    pub fn set_title_override(&mut self, text: Option<String>) {
+        let Some(title) = self.layout.item("title") else {
+            return;
+        };
+
+        let redraw = match text {
+            Some(text) => {
+                let replacement = match title.clone() {
+                    LayoutItem::Text(mut inner) => {
+                        inner.value = Some(text);
+                        LayoutItem::Text(inner)
+                    }
+                    _ => return,
+                };
+
+                self.title_override = Some(replacement.clone());
+                replacement
+
+            }
+            None => title.clone()
+        };
+
+        // Render the new title
+        Self::redraw_item(&mut self.layers, &redraw);
     }
 
     pub fn get_image(&mut self) -> RgbaImage {
@@ -169,8 +201,11 @@ impl StripRenderer {
                 continue;
             }
 
-            changed_keys.push(key.clone());
-            Self::redraw_item(&mut self.layers, &*item);
+            // Only redraw a title change if we're not overriding it
+            if key != "title" || self.title_override.is_none()  {
+                changed_keys.push(key.clone());
+                Self::redraw_item(&mut self.layers, &*item);
+            }
         }
 
         if !changed_keys.is_empty() {
