@@ -21,7 +21,7 @@ pub struct StripRenderer {
     layers: HashMap<u32, RgbaImage>,
 
     title_override: Option<LayoutItem>,
-    _icon_override: Option<String>,
+    icon_override: Option<LayoutItem>,
 
     latest_image: Option<RgbaImage>,
 }
@@ -35,7 +35,7 @@ impl StripRenderer {
             layers: HashMap::new(),
 
             title_override: None,
-            _icon_override: None,
+            icon_override: None,
 
             latest_image: None,
         };
@@ -122,12 +122,55 @@ impl StripRenderer {
 
                 self.title_override = Some(replacement.clone());
                 replacement
-
             }
-            None => title.clone(),
+            None => {
+                self.title_override = None;
+                title.clone()
+            }
         };
 
-        // Render the new title, and invalidate the cache
+        // Render the new title and invalidate the cache
+        Self::redraw_item(&mut self.layers, &redraw);
+        self.latest_image = None;
+    }
+
+    pub fn set_icon_override(&mut self, text: Option<String>) {
+        let Some(icon) = self.layout.item("icon") else {
+            return;
+        };
+
+        // Nothing to do if there's no change incoming
+        let current = self.icon_override.as_ref().and_then(|item| match item {
+            LayoutItem::Pixmap(pixmap) => Some(&pixmap.value),
+            _ => None,
+        });
+
+        let incoming = text.as_deref().map(parse_pixmap);
+        if current == incoming.as_ref() {
+            return;
+        }
+
+        // Work out what we need to draw
+        let redraw = match incoming {
+            Some(value) => {
+                let replacement = match icon.clone() {
+                    LayoutItem::Pixmap(mut inner) => {
+                        inner.value = value;
+                        LayoutItem::Pixmap(inner)
+                    }
+                    _ => return,
+                };
+
+                self.icon_override = Some(replacement.clone());
+                replacement
+            }
+            None => {
+                self.icon_override = None;
+                icon.clone()
+            }
+        };
+
+        // Render the new icon and invalidate the cache
         Self::redraw_item(&mut self.layers, &redraw);
         self.latest_image = None;
     }
@@ -213,7 +256,7 @@ impl StripRenderer {
             }
 
             // Only redraw a title change if we're not overriding it
-            if key != "title" || self.title_override.is_none()  {
+            if key != "title" || self.title_override.is_none() {
                 changed_keys.push(key.clone());
                 Self::redraw_item(&mut self.layers, &*item);
             }
