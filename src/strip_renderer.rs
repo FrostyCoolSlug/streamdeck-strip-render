@@ -100,6 +100,16 @@ impl StripRenderer {
             return;
         };
 
+        // Nothing to do if there's no change incoming
+        let current = self.title_override.as_ref().and_then(|item| match item {
+            LayoutItem::Text(text) => text.value.as_ref(),
+            _ => None,
+        });
+        if current == text.as_ref() {
+            return;
+        }
+
+        // Work out what we need to draw
         let redraw = match text {
             Some(text) => {
                 let replacement = match title.clone() {
@@ -114,11 +124,12 @@ impl StripRenderer {
                 replacement
 
             }
-            None => title.clone()
+            None => title.clone(),
         };
 
-        // Render the new title
+        // Render the new title, and invalidate the cache
         Self::redraw_item(&mut self.layers, &redraw);
+        self.latest_image = None;
     }
 
     pub fn get_image(&mut self) -> RgbaImage {
