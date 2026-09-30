@@ -14,6 +14,9 @@ pub mod layout;
 mod render;
 pub mod strip_renderer;
 
+pub(crate) const CANVAS_W: u32 = 200;
+pub(crate) const CANVAS_H: u32 = 100;
+
 pub(crate) static FONT_SANS: &[u8] = include_bytes!("../resources/fonts/noto/NotoSans.ttf");
 pub(crate) static FONT_SERIF: &[u8] = include_bytes!("../resources/fonts/noto/NotoSerif.ttf");
 pub(crate) static FONT_MONO: &[u8] = include_bytes!("../resources/fonts/noto/NotoSansMono.ttf");
@@ -49,24 +52,51 @@ impl IntoLayoutValue for Value {
 
 pub fn get_incremental_renderer(
     source: impl IntoLayoutValue,
+    bg_image: Option<String>,
+) -> Result<StripRenderer> {
+    get_incremental_renderer_with_size(source, bg_image, CANVAS_W, CANVAS_H)
+}
+
+pub fn get_incremental_renderer_with_size(
+    source: impl IntoLayoutValue,
     _bg_image: Option<String>,
+    width: u32,
+    height: u32,
 ) -> Result<StripRenderer> {
     let value = source.into_layout_value()?;
     let layout = Layout::deserialize(value).map_err(anyhow::Error::from)?;
 
-    StripRenderer::from(layout)
+    StripRenderer::new(layout, width, height)
 }
 
 pub fn render_to_image(
     source: impl IntoLayoutValue,
     bg_image: Option<String>,
 ) -> Result<DynamicImage> {
-    let img = render_to_rgba(source, bg_image)?;
+    render_to_image_with_size(source, bg_image, CANVAS_W, CANVAS_H)
+}
+
+pub fn render_to_image_with_size(
+    source: impl IntoLayoutValue,
+    bg_image: Option<String>,
+    width: u32,
+    height: u32,
+) -> Result<DynamicImage> {
+    let img = render_to_rgba_with_size(source, bg_image, width, height)?;
     Ok(DynamicImage::ImageRgba8(img))
 }
 
 pub fn render_to_png(source: impl IntoLayoutValue, bg_image: Option<String>) -> Result<Vec<u8>> {
-    let image = render_to_rgba(source, bg_image)?;
+    render_to_png_with_size(source, bg_image, CANVAS_W, CANVAS_H)
+}
+
+pub fn render_to_png_with_size(
+    source: impl IntoLayoutValue,
+    bg_image: Option<String>,
+    width: u32,
+    height: u32,
+) -> Result<Vec<u8>> {
+    let image = render_to_rgba_with_size(source, bg_image, width, height)?;
 
     let mut bytes = Vec::new();
     PngEncoder::new(&mut bytes).write_image(
@@ -78,11 +108,16 @@ pub fn render_to_png(source: impl IntoLayoutValue, bg_image: Option<String>) -> 
     Ok(bytes)
 }
 
-fn render_to_rgba(source: impl IntoLayoutValue, bg_image: Option<String>) -> Result<RgbaImage> {
+fn render_to_rgba_with_size(
+    source: impl IntoLayoutValue,
+    bg_image: Option<String>,
+    width: u32,
+    height: u32,
+) -> Result<RgbaImage> {
     let value = source.into_layout_value()?;
 
     let mut layout = Layout::deserialize(value).map_err(anyhow::Error::from)?;
-    render_layout(&mut layout, bg_image)
+    render_layout(&mut layout, bg_image, width, height)
 }
 
 #[cfg(test)]
@@ -136,16 +171,29 @@ mod tests {
             let json = fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
 
-            let img = render_to_png(json, None)
-                .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
-
             let output_file = path
                 .file_stem()
                 .and_then(|stem| stem.to_str())
                 .expect("Failed to get file stem");
 
+            let (w, h) = parse_dimensions(output_file);
+            let img = render_to_png_with_size(json, None, w, h)
+                .unwrap_or_else(|e| panic!("Failed to parse layout {:?}: {}", path, e));
+
             save_test_image(format!("{}.png", output_file).as_str(), &img);
         }
+    }
+
+    /// Extracts target canvas dimensions from a fixture filename stem (e.g. `layout_248x58` -> (248, 58)).
+    /// Falls back to default `(CANVAS_W, CANVAS_H)` if no dimension suffix is present.
+    fn parse_dimensions(stem: &str) -> (u32, u32) {
+        if let Some(pos) = stem.rfind(['_', '-'])
+            && let Some((w, h)) = stem[pos + 1..].split_once('x')
+            && let (Ok(w), Ok(h)) = (w.parse(), h.parse())
+        {
+            return (w, h);
+        }
+        (CANVAS_W, CANVAS_H)
     }
 
     fn find_json_files(dir: &PathBuf) -> Vec<PathBuf> {

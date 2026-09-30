@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "infobar-gauge",
+  "items": [
+    {
+      "key": "label",
+      "type": "text",
+      "rect": [10, 4, 140, 18],
+      "font": { "size": 13, "weight": 600 },
+      "value": "CPU Load"
+    },
+    {
+      "key": "value_text",
+      "type": "text",
+      "rect": [160, 4, 78, 18],
+      "font": { "size": 13, "weight": 700 },
+      "alignment": "right",
+      "color": "#ff4444",
+      "value": "82%"
+    },
+    {
+      "key": "gauge",
+      "type": "gbar",
+      "rect": [10, 26, 228, 26],
+      "range": { "min": 0, "max": 100 },
+      "value": 82,
+      "subtype": 4,
+      "border_w": 1,
+      "bar_h": 14,
+      "bar_bg_c": "#222222",
+      "bar_fill_c": "0:#00cc44,0.6:#ffbb00,1:#ff2222"
+    }
+  ]
+}

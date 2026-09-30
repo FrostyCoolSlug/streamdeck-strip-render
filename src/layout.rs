@@ -515,29 +515,13 @@ pub struct Rect {
     pub height: u32,
 }
 
-/// A Deserialize helper for `Rect`, ensuring all values are valid in the expected canvas.
+/// A Deserialize helper for `Rect` from `[x, y, width, height]`.
 impl<'de> Deserialize<'de> for Rect {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let [x, y, width, height] = <[u32; 4]>::deserialize(d)?;
-
-        if !(0..=200).contains(&x) {
-            return Err(serde::de::Error::custom("x out of range (0..200)"));
-        }
-
-        if !(0..=100).contains(&y) {
-            return Err(serde::de::Error::custom("y out of range (0..100)"));
-        }
-
-        if !(0..=200).contains(&width) {
-            return Err(serde::de::Error::custom("width out of range (0..200)"));
-        }
-
-        if !(0..=100).contains(&height) {
-            return Err(serde::de::Error::custom("height out of range (0..100)"));
-        }
 
         Ok(Rect {
             x,

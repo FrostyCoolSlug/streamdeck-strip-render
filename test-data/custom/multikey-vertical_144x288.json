@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "multikey-vertical",
+  "items": [
+    {
+      "key": "title",
+      "type": "text",
+      "rect": [12, 14, 120, 24],
+      "font": { "size": 16, "weight": 700 },
+      "alignment": "center",
+      "value": "Microphone"
+    },
+    {
+      "key": "icon",
+      "type": "pixmap",
+      "rect": [36, 44, 72, 72]
+    },
+    {
+      "key": "fader",
+      "type": "bar",
+      "rect": [20, 134, 104, 24],
+      "range": { "min": 0, "max": 100 },
+      "value": 75,
+      "subtype": 0,
+      "border_w": 1,
+      "bar_bg_c": "#222222",
+      "bar_fill_c": "#3399ff"
+    },
+    {
+      "key": "level",
+      "type": "text",
+      "rect": [12, 172, 120, 28],
+      "font": { "size": 22, "weight": 700 },
+      "alignment": "center",
+      "value": "75%"
+    },
+    {
+      "key": "gauge",
+      "type": "gbar",
+      "rect": [16, 214, 112, 28],
+      "range": { "min": 0, "max": 100 },
+      "value": 75,
+      "subtype": 4,
+      "border_w": 1,
+      "bar_h": 12,
+      "bar_bg_c": "#1a1a1a",
+      "bar_fill_c": "0:#00cc44,0.7:#ffbb00,1:#ff2222"
+    },
+    {
+      "key": "status",
+      "type": "text",
+      "rect": [12, 254, 120, 18],
+      "font": { "size": 12, "weight": 600 },
+      "alignment": "center",
+      "color": "#00cc44",
+      "value": "LIVE ON AIR"
+    }
+  ]
+}

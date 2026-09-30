@@ -17,9 +17,6 @@ use std::path::PathBuf;
 
 type Gradient = Vec<GradientStop>;
 
-pub const CANVAS_W: u32 = 200;
-pub const CANVAS_H: u32 = 100;
-
 #[cfg(all(feature = "super-sample", not(debug_assertions)))]
 const ENABLE_SUPER_SAMPLE: bool = true;
 
@@ -27,11 +24,16 @@ const ENABLE_SUPER_SAMPLE: bool = true;
 const ENABLE_SUPER_SAMPLE: bool = false;
 const SUPER_SAMPLE_AMOUNT: u32 = 4;
 
-/// Render `layout` onto a fresh 200×100 black canvas and return it.
-pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Result<RgbaImage> {
+/// Render `layout` onto a fresh width×height black canvas and return it.
+pub(crate) fn render_layout(
+    layout: &mut Layout,
+    bg_image: Option<String>,
+    width: u32,
+    height: u32,
+) -> Result<RgbaImage> {
     warn_supersample_disabled_once();
 
-    validate_layout(layout)?;
+    validate_layout(layout, width, height)?;
 
     if ENABLE_SUPER_SAMPLE {
         use crate::layout::Scale;
@@ -39,7 +41,7 @@ pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Re
     }
 
     // Create a canvas and begin the work (black by default, should we be transparent?)
-    let (canvas_w, canvas_h) = get_canvas_size();
+    let (canvas_w, canvas_h) = get_canvas_size(width, height);
     let mut canvas: RgbaImage = ImageBuffer::from_pixel(canvas_w, canvas_h, Rgba([0, 0, 0, 255]));
 
     // If we have a background image, load it and overlay it.
@@ -79,7 +81,7 @@ pub(crate) fn render_layout(layout: &mut Layout, bg_image: Option<String>) -> Re
         }
     }
 
-    post_process(canvas)
+    post_process(canvas, width, height)
 }
 
 /// Warns once if super-sampling is disable due to being in debug mode.
@@ -95,25 +97,22 @@ fn warn_supersample_disabled_once() {
     }
 }
 
-pub fn get_canvas_size() -> (u32, u32) {
+pub fn get_canvas_size(width: u32, height: u32) -> (u32, u32) {
     if ENABLE_SUPER_SAMPLE {
-        (
-            CANVAS_W * SUPER_SAMPLE_AMOUNT,
-            CANVAS_H * SUPER_SAMPLE_AMOUNT,
-        )
+        (width * SUPER_SAMPLE_AMOUNT, height * SUPER_SAMPLE_AMOUNT)
     } else {
-        (CANVAS_W, CANVAS_H)
+        (width, height)
     }
 }
 
-fn post_process(canvas: RgbaImage) -> Result<RgbaImage> {
+fn post_process(canvas: RgbaImage, width: u32, height: u32) -> Result<RgbaImage> {
     let out = {
         if ENABLE_SUPER_SAMPLE {
             use image::imageops::resize;
             resize(
                 &canvas,
-                CANVAS_W,
-                CANVAS_H,
+                width,
+                height,
                 image::imageops::FilterType::Lanczos3,
             )
         } else {
@@ -124,8 +123,24 @@ fn post_process(canvas: RgbaImage) -> Result<RgbaImage> {
     Ok(out)
 }
 
-pub fn validate_layout(layout: &Layout) -> Result<()> {
+pub fn validate_layout(layout: &Layout, width: u32, height: u32) -> Result<()> {
     use std::collections::HashMap;
+
+    for item in &layout.items {
+        let rect = &item.common().rect;
+        if !(0..=width).contains(&rect.x) {
+            bail!("x out of range (0..={width})");
+        }
+        if !(0..=height).contains(&rect.y) {
+            bail!("y out of range (0..={height})");
+        }
+        if !(0..=width).contains(&rect.width) {
+            bail!("width out of range (0..={width})");
+        }
+        if !(0..=height).contains(&rect.height) {
+            bail!("height out of range (0..={height})");
+        }
+    }
 
     fn rects_overlap(a: &Rect, b: &Rect) -> bool {
         a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y

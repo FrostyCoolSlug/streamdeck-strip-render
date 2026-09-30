@@ -8,7 +8,8 @@ use crate::components::bar::render_bar;
 use crate::components::gbar::render_gbar;
 use crate::components::pixmap::render_pixmap;
 use crate::components::text::render_text;
-use crate::render::{CANVAS_H, CANVAS_W, validate_layout};
+use crate::render::validate_layout;
+use crate::{CANVAS_H, CANVAS_W};
 use image::{Rgba, RgbaImage};
 use log::trace;
 use serde::Deserialize;
@@ -17,6 +18,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct StripRenderer {
+    width: u32,
+    height: u32,
     layout: Layout,
     layers: HashMap<u32, RgbaImage>,
 
@@ -28,9 +31,15 @@ pub struct StripRenderer {
 
 impl StripRenderer {
     pub fn from(layout: Layout) -> Result<Self> {
-        validate_layout(&layout)?;
+        Self::new(layout, CANVAS_W, CANVAS_H)
+    }
+
+    pub fn new(layout: Layout, width: u32, height: u32) -> Result<Self> {
+        validate_layout(&layout, width, height)?;
 
         let mut instance = Self {
+            width,
+            height,
             layout,
             layers: HashMap::new(),
 
@@ -41,6 +50,18 @@ impl StripRenderer {
         };
         instance.build_initial_layers();
         Ok(instance)
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    pub fn canvas_size(&self) -> (u32, u32) {
+        (self.width, self.height)
     }
 
     fn build_initial_layers(&mut self) {
@@ -54,16 +75,21 @@ impl StripRenderer {
             let canvas = self
                 .layers
                 .entry(item.z_order())
-                .or_insert(RgbaImage::new(CANVAS_W, CANVAS_H));
+                .or_insert(RgbaImage::new(self.width, self.height));
 
             Self::paint(canvas, item);
         }
     }
 
-    fn redraw_item(layers: &mut HashMap<u32, RgbaImage>, item: &LayoutItem) {
+    fn redraw_item(
+        layers: &mut HashMap<u32, RgbaImage>,
+        width: u32,
+        height: u32,
+        item: &LayoutItem,
+    ) {
         let canvas = layers
             .entry(item.z_order())
-            .or_insert_with(|| RgbaImage::new(CANVAS_W, CANVAS_H));
+            .or_insert_with(|| RgbaImage::new(width, height));
 
         Self::clear_rect(canvas, &item.common().rect);
         if item.enabled() {
@@ -130,7 +156,7 @@ impl StripRenderer {
         };
 
         // Render the new title and invalidate the cache
-        Self::redraw_item(&mut self.layers, &redraw);
+        Self::redraw_item(&mut self.layers, self.width, self.height, &redraw);
         self.latest_image = None;
     }
 
@@ -171,7 +197,7 @@ impl StripRenderer {
         };
 
         // Render the new icon and invalidate the cache
-        Self::redraw_item(&mut self.layers, &redraw);
+        Self::redraw_item(&mut self.layers, self.width, self.height, &redraw);
         self.latest_image = None;
     }
 
@@ -181,8 +207,7 @@ impl StripRenderer {
         }
 
         // Create the new Image, and grab it's raw buffer
-        //let mut image = RgbaImage::new(CANVAS_W, CANVAS_H);
-        let mut image = RgbaImage::from_pixel(CANVAS_W, CANVAS_H, Rgba([0, 0, 0, 255]));
+        let mut image = RgbaImage::from_pixel(self.width, self.height, Rgba([0, 0, 0, 255]));
 
         // Get all the layers sorted by z-order
         let mut entries: Vec<_> = self.layers.iter().collect();
@@ -263,7 +288,7 @@ impl StripRenderer {
             };
             if should_redraw {
                 changed_keys.push(key.clone());
-                Self::redraw_item(&mut self.layers, &*item);
+                Self::redraw_item(&mut self.layers, self.width, self.height, &*item);
             }
         }
 
